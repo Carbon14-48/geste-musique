@@ -17,7 +17,7 @@ export const DEFAULT_THRESHOLDS = {
 
 export const POSE_LABELS = [
   'none', 'fist', 'one', 'two', 'peace', 'three', 'four', 'palm', 'open',
-  'like', 'dislike', 'rock', 'call', 'gun', 'ok', 'claw', 'other',
+  'like', 'dislike', 'rock', 'hornsThumb', 'call', 'gun', 'ok', 'claw', 'other',
 ];
 
 export const POSE_NAMES = {
@@ -37,6 +37,7 @@ export const POSE_NAMES = {
   gun: 'Pistolet',
   ok: 'OK',
   claw: 'Griffe',
+  hornsThumb: 'Cornes + pouce',
   other: 'Autre',
 };
 
@@ -70,12 +71,21 @@ export function fingerStates(world, th = DEFAULT_THRESHOLDS) {
   return { states, bends };
 }
 
-/** Paume tournée vers la caméra ? (points image non miroir + étiquette MediaPipe brute). */
+/**
+ * Paume tournée vers la caméra ? (points image non miroir + étiquette MediaPipe brute).
+ * Vraie main droite, paume vers la caméra, doigts en haut : sur l'image brute, le pouce est à droite
+ * (x grand) et l'auriculaire à gauche, donc z < 0 ; MediaPipe l'étiquette « Left » (image supposée miroir).
+ */
 export function palmFacingCamera(image, handednessLabel) {
   const v1 = sub(image[LM.INDEX_MCP], image[LM.WRIST]);
   const v2 = sub(image[LM.PINKY_MCP], image[LM.WRIST]);
   const z = v1.x * v2.y - v1.y * v2.x;
-  return handednessLabel === 'Left' ? z > 0 : z < 0;
+  return handednessLabel === 'Left' ? z < 0 : z > 0;
+}
+
+/** Doigts pointés vers le bas : la base du majeur est sous le poignet à l'image. */
+export function handPointsDown(image) {
+  return image[LM.MIDDLE_MCP].y > image[LM.WRIST].y + 0.02;
 }
 
 /**
@@ -106,6 +116,8 @@ export function classifyPose(world, image, th = DEFAULT_THRESHOLDS) {
     label = dy < -0.6 ? 'like' : dy > 0.6 ? 'dislike' : 'other';
   } else if (key === '01001') {
     label = 'rock';
+  } else if (key === '11001') {
+    label = 'hornsThumb';
   } else if (key === '10001') {
     label = 'call';
   } else if (key === '11000') {

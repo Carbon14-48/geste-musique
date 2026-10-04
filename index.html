@@ -2,134 +2,90 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Geste Musique</title>
-    <meta name="description" content="Jouer de la musique avec les mains devant une webcam." />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐</text></svg>" />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#06070a" />
+    <meta name="color-scheme" content="dark" />
+    <title>Geste Live</title>
+    <meta name="description" content="Jouer de la musique en direct avec les mains devant une webcam : accords, basse, batterie, mélodie et effets, sans rien installer." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23ece9e2' stroke-width='6'/><circle cx='50' cy='50' r='14' fill='%23ece9e2'/></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <header class="topbar">
-      <h1>🖐 Geste Musique</h1>
-      <button id="start" class="primary">▶ Démarrer (caméra + son)</button>
-      <label>Mode <select id="mode"></select></label>
-      <label>Instrument <select id="instrument"></select></label>
-      <label>Tonique <select id="root"></select></label>
-      <label>Gamme <select id="scale"></select></label>
-      <label class="check"><input type="checkbox" id="snap" checked /> Aimanter</label>
-      <span class="spacer"></span>
-      <button id="rec-audio" title="Enregistrer le son (WebM)">⏺ Audio</button>
-      <button id="rec-midi" title="Enregistrer les notes (.mid)">⏺ MIDI</button>
-      <button id="loop-clear" title="Effacer les boucles">🔁 Effacer</button>
-      <span id="lock" class="badge" hidden>🔒 verrouillé</span>
-    </header>
+    <canvas id="plate" aria-label="Surface de jeu : caméra et instrument"></canvas>
+    <video id="cam" playsinline muted></video>
 
-    <div class="layout">
-      <main class="stage" id="stage">
-        <video id="video" playsinline muted></video>
-        <canvas id="overlay"></canvas>
-        <div class="hud">
-          <div><span class="hud-label">Note</span><strong id="hud-note">—</strong></div>
-          <div><span class="hud-label">Accord / motif</span><strong id="hud-chord">—</strong></div>
-          <div><span class="hud-label">Tempo</span><strong id="hud-tempo">—</strong></div>
-          <div><span class="hud-label">Boucles</span><strong id="hud-loop">vide</strong></div>
-        </div>
-        <div id="toasts" class="toasts" aria-live="polite"></div>
-        <div id="splash" class="splash">
-          <p>Placez-vous à 50–80 cm de la caméra, bien éclairé de face, mains entièrement visibles.</p>
-          <p>Cliquez sur <strong>Démarrer</strong> pour autoriser la caméra et le son.</p>
-        </div>
-      </main>
+    <section id="intro" class="intro">
+      <div class="intro-frame">
+        <p class="kicker">fig. 01 · surface de contrôle à deux mains</p>
+        <h1>GESTE LIVE</h1>
+        <p class="lead">Jouez de la musique avec vos mains. La main gauche joue les accords, la main droite choisit la batterie, la basse, la mélodie, les effets ou le son.</p>
+        <button id="start" class="start">commencer</button>
+        <p id="intro-error" class="error" role="alert"></p>
+        <p class="small">
+          <button id="intro-help" class="link">comment jouer</button> ·
+          <a href="studio.html" class="link">studio (8 modes, apprentissage)</a>
+        </p>
+        <p class="foot">navigateur · rien à installer · rien n'est envoyé · casque conseillé</p>
+      </div>
+    </section>
 
-      <aside class="panel">
-        <nav class="tabs" role="tablist">
-          <button role="tab" data-tab="play" class="active">Jouer</button>
-          <button role="tab" data-tab="learn">Apprendre</button>
-          <button role="tab" data-tab="data">Données</button>
-          <button role="tab" data-tab="settings">Réglages</button>
-        </nav>
+    <nav id="rail" class="rail" hidden>
+      <button id="btn-rec">● enregistrer</button>
+      <select id="rec-format" aria-label="Format de la prise"></select>
+      <button id="btn-settings">réglages</button>
+      <button id="btn-help">aide</button>
+    </nav>
 
-        <section data-panel="play" class="tab-panel active">
-          <div class="hands">
-            <div class="hand-card"><h3>Main gauche</h3><p id="hand-left">—</p></div>
-            <div class="hand-card"><h3>Main droite</h3><p id="hand-right">—</p></div>
-          </div>
-          <h2 id="mode-name">Mode</h2>
-          <table class="help" id="mode-help"></table>
-          <details>
-            <summary>Gestes valables partout</summary>
-            <table class="help" id="global-help"></table>
-          </details>
-          <h3>Journal</h3>
-          <ol id="log" class="log"></ol>
-        </section>
+    <aside id="panel-settings" class="panel" hidden>
+      <header><h2>réglages</h2><button data-close aria-label="Fermer">×</button></header>
+      <h3>morceau</h3>
+      <label>tonalité <select id="set-root"></select> <select id="set-mode"></select></label>
+      <label>tempo <input id="set-bpm" type="range" min="60" max="160" step="1" /> <output id="bpm-out"></output> bpm</label>
+      <label>son des accords <select id="set-bank"></select></label>
+      <label class="check"><input type="checkbox" id="set-snap" /> caler les accords sur la croche suivante</label>
+      <h3>caméra</h3>
+      <label class="check"><input type="checkbox" id="set-mirror" /> image miroir</label>
+      <label class="check"><input type="checkbox" id="set-swap" /> inverser main gauche / droite</label>
+      <label class="check"><input type="checkbox" id="set-invertPalm" /> inverser paume / dos (si le mineur s'active à l'envers)</label>
+      <label class="check"><input type="checkbox" id="set-simpleArc" /> arc simplifié (tout poing ouvre l'arc)</label>
+      <label>voile sur la caméra <input id="set-scrim" type="range" min="0" max="0.9" step="0.05" /></label>
+      <h3>clavier</h3>
+      <p><kbd>1</kbd>–<kbd>5</kbd> mode · <kbd>0</kbd> aucun · <kbd>R</kbd> enregistrer · <kbd>espace</kbd> silence</p>
+      <p><a class="link" href="studio.html">ouvrir le studio →</a></p>
+    </aside>
 
-        <section data-panel="learn" class="tab-panel">
-          <p class="hint">Apprenez vos propres gestes : tenez la pose devant la caméra (main droite de préférence) pendant l'enregistrement. 30 à 50 exemples par geste suffisent. Ajoutez un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisissez le mode <em>Mes gestes</em>.</p>
-          <div class="row">
-            <input id="learn-name" placeholder="Nom du geste (ex. griffe)" />
-            <button id="learn-record">⏺ Enregistrer 2 s</button>
-          </div>
-          <p>Prédiction : <strong id="learn-pred">—</strong></p>
-          <ul id="learn-list" class="list"></ul>
-          <div class="row">
-            <button id="learn-export">Exporter</button>
-            <label class="button">Importer <input type="file" id="learn-import" accept="application/json" hidden /></label>
-            <button id="learn-clear" class="danger">Tout effacer</button>
-          </div>
-        </section>
+    <aside id="panel-help" class="panel" hidden>
+      <header><h2>comment jouer</h2><button data-close aria-label="Fermer">×</button></header>
+      <p>Reculez jusqu'à voir vos deux coudes dans l'image, avec la lumière devant vous. Mettez un casque.</p>
+      <h3>main gauche · les accords</h3>
+      <ul>
+        <li><b>1, 2, 3, 4 doigts</b> : accords I, II, III, IV de la tonalité</li>
+        <li><b>main ouverte</b> : V · <b>cornes</b> (index + auriculaire) : VI · <b>cornes + pouce</b> : VII</li>
+        <li><b>dos de la main</b> : le même accord en mineur / majeur parallèle</li>
+        <li><b>doigts vers le bas</b> : l'accord descend d'un demi-ton</li>
+        <li><b>hauteur</b> : bas = triade, plus haut = 7e, 9e, 13e (en direct)</li>
+        <li><b>tourner le poignet</b> : filtre et longueur des notes</li>
+        <li>lâcher la pose arrête l'accord ; la refaire le rejoue</li>
+      </ul>
+      <h3>main droite · l'arc des modes</h3>
+      <ul>
+        <li><b>poing, dos à la caméra</b> : l'arc apparaît</li>
+        <li><b>glisser</b> à gauche / à droite : choisir une case</li>
+        <li><b>ouvrir la main</b> paume vers la caméra : valider · dos vers la caméra : annuler</li>
+      </ul>
+      <h3>les 5 modes</h3>
+      <ul>
+        <li><b>batterie</b> : pincez pouce + index (grosse caisse), majeur (caisse claire), annulaire (charleston), auriculaire (toms) ; tournez le poignet pour le niveau : silence → base → fantômes → groove → roulements. Lâchez : ça continue.</li>
+        <li><b>basse</b> : les 4 pincements règlent densité, notes, octaves et groove (tresillo, galop) ; la hauteur règle la résonance.</li>
+        <li><b>mélodie</b> : la hauteur choisit la note, le pincement la tient ; un son par doigt.</li>
+        <li><b>fx / dj</b> : delay, réverb, stutter, crush, actifs tant que vous pincez ; le poignet règle l'effet.</li>
+        <li><b>sculpt</b> : arpège, enveloppe, trémolo, grain ; la hauteur ouvre le voicing des accords.</li>
+      </ul>
+      <p class="small">Un pincement ne compte que si la main est immobile et qu'un autre doigt est levé.</p>
+    </aside>
 
-        <section data-panel="data" class="tab-panel">
-          <p class="hint">Collectez un jeu de données pour entraîner les modèles TensorFlow (voir <code>training/README.md</code>). Enregistrez plusieurs personnes, éclairages et distances.</p>
-          <div class="row">
-            <label>Joueur <input id="data-subject" value="joueur1" /></label>
-          </div>
-          <div class="row">
-            <label>Pose <select id="data-pose-label"></select></label>
-            <button id="data-pose-record">⏺ Poses (3 s)</button>
-          </div>
-          <div class="row">
-            <label>Mouvement <select id="data-seq-label"></select></label>
-            <button id="data-seq-record">⏺ Séquence (1,5 s)</button>
-          </div>
-          <p id="data-status" class="status"></p>
-          <pre id="data-stats" class="stats"></pre>
-          <div class="row">
-            <button id="data-export">Exporter le JSON</button>
-            <label class="button">Importer <input type="file" id="data-import" accept="application/json" hidden /></label>
-            <button id="data-clear" class="danger">Vider</button>
-          </div>
-        </section>
-
-        <section data-panel="settings" class="tab-panel">
-          <h3>Caméra</h3>
-          <label class="check"><input type="checkbox" id="mirror" checked /> Affichage miroir</label>
-          <label class="check"><input type="checkbox" id="swap" /> Inverser main gauche / droite</label>
-          <label class="check"><input type="checkbox" id="skeleton" checked /> Afficher le squelette</label>
-          <h3>Calibration</h3>
-          <p class="hint">Adapte les seuils à votre main et à votre espace de jeu.</p>
-          <div class="row wrap">
-            <button id="cal-open">1. Main ouverte</button>
-            <button id="cal-fist">2. Poing</button>
-            <button id="cal-low">3. Main en bas</button>
-            <button id="cal-high">4. Main en haut</button>
-            <button id="cal-reset">Réinitialiser</button>
-          </div>
-          <p id="cal-status" class="status"></p>
-          <h3>Seuils</h3>
-          <div id="thresholds" class="sliders"></div>
-          <h3>MIDI</h3>
-          <label>Sortie <select id="midi-out"><option value="">(aucune)</option></select></label>
-          <h3>Modèles</h3>
-          <pre id="model-status" class="stats">Pas encore chargés.</pre>
-          <h3>Performances</h3>
-          <pre id="perf" class="stats">—</pre>
-          <h3>Raccourcis clavier</h3>
-          <p class="hint"><kbd>1</kbd>–<kbd>8</kbd> mode · <kbd>Espace</kbd> silence · <kbd>V</kbd> verrou · <kbd>B</kbd> boucle</p>
-        </section>
-      </aside>
-    </div>
-
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/live/main.js"></script>
   </body>
 </html>

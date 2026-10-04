@@ -7,6 +7,25 @@ reconnaissent les gestes, et Tone.js produit le son. Le projet peut aussi pilote
 Le projet suit le cahier des charges [`docs/catalogue-gestes-geste-musique.pdf`](docs/catalogue-gestes-geste-musique.pdf).
 L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md).
 
+## Deux instruments
+
+| Page | Contenu |
+|---|---|
+| **Geste Live** (`index.html`, page d'accueil) | Instrument à deux mains, dans l'esprit de [gesture.live](https://gesture.live). La main gauche joue les accords, la main droite choisit dans un arc l'un des 5 modes : batterie, basse, mélodie, fx, sculpt. |
+| **Studio** (`studio.html`) | Les 8 modes du catalogue, l'apprentissage de gestes et la collecte de données pour TensorFlow |
+
+### Geste Live en bref
+- **Main gauche (accords)** :
+  - 1 à 4 doigts = accords I à IV, main ouverte = V, cornes = VI, cornes + pouce = VII ;
+  - dos de la main = mode parallèle ; doigts vers le bas = un demi-ton plus bas ;
+  - hauteur de la main = triade, puis 7e, 9e et 13e ;
+  - rotation du poignet = filtre.
+- **Main droite** :
+  - poing dos à la caméra → l'arc des modes apparaît ; on glisse, puis on ouvre la main pour choisir ;
+  - pincer le pouce avec un doigt choisit une piste, et la rotation du poignet règle sa valeur.
+- **Enregistrement** d'une prise vidéo + son, en format large ou vertical 720×1280, entièrement dans le navigateur.
+- **Clavier** : <kbd>1</kbd>–<kbd>5</kbd> mode, <kbd>R</kbd> enregistrer, <kbd>Espace</kbd> silence.
+
 ## Démarrage rapide
 
 ```bash
@@ -20,13 +39,13 @@ Placez-vous à 50–80 cm de la caméra, bien éclairé de face.
 Autres commandes :
 
 ```bash
-npm test           # 53 tests unitaires (règles, déclencheurs, mouvements, modes…)
+npm test           # 72 tests unitaires (théorie musicale, arc, pincements, règles, modes…)
 npm run build      # version statique dans dist/ (GitHub Pages, Netlify…)
 ```
 
 > La caméra n'est accessible qu'en **HTTPS** ou sur **localhost**.
 
-## Les 8 modes
+## Studio : les 8 modes
 
 | Mode | Principe |
 |---|---|
@@ -84,6 +103,7 @@ caméra ─► MediaPipe Hand Landmarker (src/core/detector.js)
 
 | Dossier | Contenu |
 |---|---|
+| `src/live/` | Geste Live : théorie (accords, épices), main gauche, arc, pincements, 5 modes, audio, planche, enregistrement |
 | `src/core/` | Points de la main, normalisation, règles, filtres, mouvements, déclencheurs, gammes |
 | `src/audio/` | Moteur Tone.js, sortie MIDI, fichier .mid, looper |
 | `src/modes/` | Un fichier par mode, plus les gestes globaux |

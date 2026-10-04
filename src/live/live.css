@@ -1,0 +1,265 @@
+:root {
+  --bg: #06070a;
+  --ink: #ece9e2;
+  --dim: rgba(236, 233, 226, 0.55);
+  --faint: rgba(236, 233, 226, 0.16);
+  --accent: #f4c26b;
+  --rec: #ff5d5d;
+  --sans: Geist, 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 var(--sans);
+}
+
+#plate {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+#cam {
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+button,
+select,
+input,
+a.link {
+  font: inherit;
+  color: inherit;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.intro-frame {
+  max-width: 640px;
+  width: 100%;
+  border: 1px solid var(--faint);
+  padding: 48px 40px 32px;
+  position: relative;
+  background: rgba(6, 7, 10, 0.6);
+}
+
+.kicker,
+.foot,
+.small,
+.rail,
+.panel h2,
+.panel h3 {
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.intro h1 {
+  font-weight: 400;
+  font-size: clamp(44px, 11vw, 96px);
+  letter-spacing: 0.12em;
+  margin: 18px 0 12px;
+  line-height: 1;
+}
+
+.lead {
+  color: var(--dim);
+  font-size: 16px;
+  max-width: 46ch;
+}
+
+.start {
+  margin: 24px 0 8px;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  padding: 14px 28px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.start:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  color: var(--rec);
+  min-height: 1.5em;
+  font-size: 13px;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.foot {
+  margin-top: 32px;
+  border-top: 1px solid var(--faint);
+  padding-top: 14px;
+}
+
+.rail {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(6, 7, 10, 0.75);
+  border: 1px solid var(--faint);
+  padding: 6px;
+}
+
+.rail button,
+.rail select {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.rail button:hover,
+.rail select:hover {
+  border-color: var(--faint);
+}
+
+.rail select option {
+  background: var(--bg);
+}
+
+.rail button.on {
+  color: var(--rec);
+  border-color: var(--rec);
+}
+
+.panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  bottom: 70px;
+  width: min(380px, calc(100vw - 32px));
+  overflow-y: auto;
+  background: rgba(6, 7, 10, 0.94);
+  border: 1px solid var(--faint);
+  padding: 16px 20px;
+}
+
+.panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel header button {
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.panel h2 {
+  margin: 0;
+  color: var(--ink);
+}
+
+.panel h3 {
+  margin: 20px 0 8px;
+}
+
+.panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.panel select,
+.panel input[type='range'] {
+  background: transparent;
+  border: 1px solid var(--faint);
+  padding: 4px 6px;
+}
+
+.panel select option {
+  background: var(--bg);
+}
+
+.panel ul {
+  padding-left: 18px;
+  color: var(--dim);
+}
+
+.panel li {
+  margin: 6px 0;
+}
+
+.panel b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+kbd {
+  font-family: var(--mono);
+  border: 1px solid var(--faint);
+  padding: 0 5px;
+}
+
+@media (max-width: 600px) {
+  .intro-frame {
+    padding: 32px 20px 24px;
+  }
+
+  .rail {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    justify-content: space-between;
+  }
+}

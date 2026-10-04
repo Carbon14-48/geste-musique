@@ -1,9 +1,9 @@
 // Transforme les résultats bruts de MediaPipe en états de main exploitables par les modes :
 // rôle (gauche/droite), points lissés, pose stable, comptage, mouvements, valeurs continues.
 
-import { LM, dist2d, normalizePose } from './landmarks.js';
+import { LM, dist, dist2d, normalizePose } from './landmarks.js';
 import { LandmarkSmoother } from './oneEuro.js';
-import { classifyPose, openness, palmFacingCamera, DEFAULT_THRESHOLDS } from './rules.js';
+import { classifyPose, openness, palmFacingCamera, handPointsDown, DEFAULT_THRESHOLDS } from './rules.js';
 import { GestureStabilizer, Cooldown } from './trigger.js';
 import { MotionTracker } from './motion.js';
 
@@ -26,6 +26,7 @@ export class HandTracker {
   constructor() {
     this.mirror = true; // affichage « miroir » : la main droite apparaît à droite
     this.swapHands = false;
+    this.invertPalm = false; // réglage si la détection paume / dos est inversée sur une caméra
     this.thresholds = { ...DEFAULT_THRESHOLDS };
     this.poseModel = null; // classifieur TF.js optionnel {predict(features) -> {label, confidence}}
     this.poseModelMinConfidence = 0.8;
@@ -154,6 +155,11 @@ export class HandTracker {
     const w = screen[LM.WRIST];
     const m = screen[LM.MIDDLE_MCP];
     const tilt = (Math.atan2(m.x - w.x, w.y - m.y) * 180) / Math.PI;
+    // Distance bout du pouce -> bout de chaque doigt (index..auriculaire), en tailles de main.
+    const wsize = Math.max(dist(world[LM.WRIST], world[LM.MIDDLE_MCP]), 1e-6);
+    const pinches = [LM.INDEX_TIP, LM.MIDDLE_TIP, LM.RING_TIP, LM.PINKY_TIP].map(
+      (tip) => dist(world[LM.THUMB_TIP], world[tip]) / wsize,
+    );
     return {
       role,
       handedness,
@@ -177,7 +183,11 @@ export class HandTracker {
       height: 1 - palm.y,
       depth: size, // plus la main est grande à l'écran, plus elle est proche
       tilt,
-      palmFacing: palmFacingCamera(image, handedness),
+      // Rotation du poignet ramenée dans [0, 1] (-50° -> 0, 0° -> 0,5, +50° -> 1).
+      roll: Math.max(0, Math.min(1, 0.5 + tilt / 100)),
+      pinches,
+      pointsDown: handPointsDown(image),
+      palmFacing: palmFacingCamera(image, handedness) !== this.invertPalm,
       label: 'none',
       count: null,
       velocity: { x: 0, y: 0, speed: 0 },
