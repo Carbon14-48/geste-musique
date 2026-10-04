@@ -263,3 +263,152 @@ kbd {
     justify-content: space-between;
   }
 }
+
+/* --- Tutoriel animé (panneau de droite) ------------------------------------------------- */
+
+:root {
+  --tutor-w: 360px;
+}
+
+body.with-tutor #plate {
+  width: calc(100vw - var(--tutor-w));
+}
+
+body.with-tutor .intro {
+  right: var(--tutor-w);
+}
+
+body.with-tutor .rail {
+  left: calc((100vw - var(--tutor-w)) / 2);
+}
+
+body.with-tutor .panel {
+  right: calc(var(--tutor-w) + 16px);
+}
+
+.tutor {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--tutor-w);
+  background: #0b0c10;
+  border-left: 1px solid var(--faint);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.tutor header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tutor header button {
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+#tutor-canvas {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: block;
+}
+
+.tutor h2 {
+  font-weight: 400;
+  font-size: 26px;
+  margin: 6px 0 0;
+  letter-spacing: 0.02em;
+}
+
+.tutor p {
+  margin: 0;
+  color: var(--dim);
+}
+
+.tutor-status {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border: 1px solid var(--faint);
+  padding: 8px 10px;
+}
+
+.tutor-status.ok {
+  color: var(--bg) !important;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.tutor-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tutor-nav button {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--faint);
+  color: var(--ink);
+  padding: 8px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.tutor-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.small-note {
+  margin-top: auto !important;
+}
+
+.credit {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --tutor-w: 100vw;
+  }
+
+  body.with-tutor #plate {
+    width: 100vw;
+    height: 55vh;
+  }
+
+  .tutor {
+    top: 55vh;
+    width: 100vw;
+    border-left: none;
+    border-top: 1px solid var(--faint);
+  }
+
+  #tutor-canvas {
+    max-height: 22vh;
+    aspect-ratio: auto;
+  }
+
+  body.with-tutor .intro,
+  body.with-tutor .panel {
+    right: 0;
+  }
+
+  body.with-tutor .rail {
+    left: 16px;
+  }
+}

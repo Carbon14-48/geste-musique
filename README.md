@@ -23,7 +23,15 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
 - **Main droite** :
   - poing dos à la caméra → l'arc des modes apparaît ; on glisse, puis on ouvre la main pour choisir ;
   - pincer le pouce avec un doigt choisit une piste, et la rotation du poignet règle sa valeur.
+- **Instruments enregistrés** : piano, guitares, violon, violoncelle, flûte, saxophone, clarinette, trompette, harpe, orgue, harmonium, xylophone, ou synthé.
+  - On les choisit dans la barre du bas, avec <kbd>←</kbd> <kbd>→</kbd>, ou en **balayant la main gauche ouverte** (pouce levé ou baissé tenu marche aussi).
+  - La mélodie de la main droite utilise le même instrument.
+- **Main droite = mélodie dès le départ** : pincer le pouce avec l'index, la hauteur de la main choisit la note.
+- **Deux poings fermés = silence**. Au-delà de 1,5 s, tout s'arrête.
+- **Tutoriel « comment jouer »** à droite : 8 leçons avec des mains animées. Chaque leçon se valide toute seule quand le geste est réussi devant la caméra (touche <kbd>H</kbd>).
 - **Enregistrement** d'une prise vidéo + son, en format large ou vertical 720×1280, entièrement dans le navigateur.
+
+Échantillons d'instruments : [nbrosowsky/tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments), licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Ils sont chargés depuis jsDelivr, donc il faut une connexion au premier chargement.
 - **Clavier** : <kbd>1</kbd>–<kbd>5</kbd> mode, <kbd>R</kbd> enregistrer, <kbd>Espace</kbd> silence.
 
 ## Démarrage rapide
@@ -39,7 +47,7 @@ Placez-vous à 50–80 cm de la caméra, bien éclairé de face.
 Autres commandes :
 
 ```bash
-npm test           # 72 tests unitaires (théorie musicale, arc, pincements, règles, modes…)
+npm test           # 79 tests unitaires (théorie musicale, arc, pincements, instruments, tutoriel, modes…)
 npm run build      # version statique dans dist/ (GitHub Pages, Netlify…)
 ```
 

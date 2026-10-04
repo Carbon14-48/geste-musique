@@ -131,8 +131,11 @@ export class Plate {
       const blink = Math.floor(performance.now() / 500) % 2 === 0;
       label(ctx, `${blink ? '●' : '○'} REC ${S.recordingTime ?? ''}`, w - pad, m + 46, { align: 'right', color: '#ff5d5d' });
     }
-    label(ctx, 'GESTE LIVE · V1.0', pad, h - m - 16, { size: 10 });
-    if (!portrait) label(ctx, 'NAVIGATEUR · RIEN À INSTALLER · RIEN N\'EST ENVOYÉ', w - pad, h - m - 16, { size: 10, align: 'right' });
+    if (!S.started) {
+      // Pied de page seulement avant le début : ensuite la barre de commandes occupe le bas.
+      label(ctx, 'GESTE LIVE · V1.0', pad, h - m - 16, { size: 10 });
+      if (!portrait) label(ctx, 'NAVIGATEUR · RIEN À INSTALLER · RIEN N\'EST ENVOYÉ', w - pad, h - m - 16, { size: 10, align: 'right' });
+    }
 
     // Panneaux.
     const panelW = portrait ? w - 2 * pad : Math.min(360, w * 0.28);
@@ -159,21 +162,31 @@ export class Plate {
     this.messages = this.messages.filter((msg) => now - msg.t < 2200);
     this.messages.forEach((msg, i) => {
       const alpha = Math.min(1, (2200 - (now - msg.t)) / 400);
-      label(ctx, msg.text, w / 2, h - m - 44 - (this.messages.length - 1 - i) * 18, {
+      label(ctx, msg.text, w / 2, h - m - 64 - (this.messages.length - 1 - i) * 18, {
         size: 12,
         align: 'center',
         color: `rgba(236, 233, 226, ${0.85 * alpha})`,
       });
     });
 
-    if (!S.hands?.left && !S.hands?.right && S.started) {
+    if (S.muted) {
+      ctx.fillStyle = 'rgba(6, 7, 10, 0.55)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.font = `300 ${Math.min(120, w * 0.1)}px ${SANS}`;
+      ctx.fillStyle = INK;
+      ctx.textAlign = 'center';
+      ctx.fillText('SILENCE', w / 2, h / 2);
+      ctx.textAlign = 'left';
+      label(ctx, 'ouvrez les mains pour reprendre · plus de 1,5 s = tout s\'arrête', w / 2, h / 2 + 40, { size: 11, align: 'center' });
+    }
+    if (!S.hands?.left && !S.hands?.right && S.started && !S.muted) {
       label(ctx, 'montrez vos deux mains · reculez jusqu\'à voir vos coudes', w / 2, h / 2, { size: 12, align: 'center' });
     }
     ctx.restore();
   }
 
   drawLeftPanel(ctx, b, S, portrait) {
-    label(ctx, 'GAUCHE · ACCORDS', b.x, b.y);
+    label(ctx, `GAUCHE · ACCORDS · ${S.instrument ?? ''}`, b.x, b.y);
     const c = S.chord;
     const big = portrait ? Math.min(84, b.w * 0.2) : Math.min(96, b.w * 0.28);
     ctx.save();

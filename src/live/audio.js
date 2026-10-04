@@ -6,6 +6,7 @@
 
 import * as Tone from 'tone';
 import { drumBar, bassStep, DRUM_FAMILIES } from './patterns.js';
+import { SAMPLE_BASE, instrumentInfo, sampleUrls } from './instruments.js';
 
 export const BANKS = { pad: 'Nappe', keys: 'Keys (FM)', hollow: 'Hollow (pulse)' };
 export const LEAD_VOICES = ['saw', 'square', 'flûte', 'verre'];
@@ -51,13 +52,17 @@ export class LiveAudio {
     this.envelope = 0;
     this.onStep = null; // (step, bar) pour l'affichage
     this.leadNotes = [null, null, null, null];
+    this.instrument = 'piano';
+    this.samplers = {}; // id -> Promise<{chord, lead}>
+    this.leadSampler = null; // instrument enregistré utilisé par la mélodie (sinon voix de synthèse)
+    this.muted = false;
   }
 
   get transport() {
     return Tone.getTransport();
   }
 
-  async start(bpm = 100) {
+  async start(bpm = 100, instrument = this.instrument) {
     if (this.ready) return;
     await Tone.start();
     const ctx = Tone.getContext();
@@ -66,7 +71,8 @@ export class LiveAudio {
     this.out = new Tone.Limiter(-1).toDestination();
     this.recordDest = ctx.rawContext.createMediaStreamDestination();
     this.out.connect(this.recordDest);
-    this.reverb = new Tone.Reverb({ decay: 4, wet: 0.18 }).connect(this.out);
+    this.master = new Tone.Gain(1).connect(this.out); // sourdine générale (deux poings fermés)
+    this.reverb = new Tone.Reverb({ decay: 4, wet: 0.18 }).connect(this.master);
     this.delay = new Tone.FeedbackDelay({ delayTime: '8n.', feedback: 0.35, wet: 0 }).connect(this.reverb);
     this.stutter = new Tone.Tremolo({ frequency: 8, type: 'square', depth: 0, spread: 0 }).connect(this.delay).start();
     this.crusher = new Tone.BitCrusher(4).connect(this.stutter);
@@ -79,6 +85,7 @@ export class LiveAudio {
     this.tremolo = new Tone.Tremolo({ frequency: '8n', depth: 0, spread: 40 }).connect(this.grit).start();
     this.padFilter = new Tone.Filter({ type: 'lowpass', frequency: 2400, Q: 0.8 }).connect(this.tremolo);
     this.pad = makePad(this.bank).connect(this.padFilter);
+    this.chordInst = this.pad; // instrument qui joue les accords (synthé ou échantillons)
     this.arpSynth = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'triangle' },
       envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 },
@@ -127,6 +134,59 @@ export class LiveAudio {
     this.arpLoop = new Tone.Loop((time) => this.arpTick(time), '16n');
     this.transport.start('+0.05');
     this.ready = true;
+    try {
+      await this.setInstrument(instrument);
+    } catch (err) {
+      console.warn('Échantillons indisponibles, retour au synthé', err);
+      await this.setInstrument('synth');
+    }
+  }
+
+  /** Charge (une seule fois) les deux échantillonneurs d'un instrument : accords et mélodie. */
+  loadSamplers(id) {
+    if (!this.samplers[id]) {
+      const urls = sampleUrls(id);
+      const { release } = instrumentInfo(id);
+      const make = (dest, volume) =>
+        new Promise((resolve, reject) => {
+          const sampler = new Tone.Sampler({
+            urls,
+            baseUrl: `${SAMPLE_BASE}${id}/`,
+            release,
+            volume,
+            onload: () => resolve(sampler),
+            onerror: (e) => reject(e),
+          }).connect(dest);
+        });
+      this.samplers[id] = Promise.all([make(this.padFilter, -6), make(this.leadFilter, -2)]).then(([chord, lead]) => ({ chord, lead }));
+      this.samplers[id].catch(() => delete this.samplers[id]);
+    }
+    return this.samplers[id];
+  }
+
+  /** Change d'instrument ; l'accord tenu continue avec le nouveau son. */
+  async setInstrument(id) {
+    const info = instrumentInfo(id);
+    const pair = info.id === 'synth' ? { chord: this.pad, lead: null } : await this.loadSamplers(info.id);
+    const notes = this.chordNotes;
+    if (this.ready) {
+      this.chordInst.releaseAll();
+      this.leadNotes.forEach((_, i) => this.leadOff(i));
+    }
+    this.chordInst = pair.chord;
+    this.leadSampler = pair.lead;
+    this.instrument = info.id;
+    this.applyEnvelope();
+    if (notes.length) {
+      this.chordNotes = [];
+      this.setChord(notes);
+    }
+    return info;
+  }
+
+  setMuted(on) {
+    this.muted = on;
+    if (this.ready) this.master.gain.rampTo(on ? 0 : 1, 0.06);
   }
 
   setBpm(bpm) {
@@ -176,10 +236,13 @@ export class LiveAudio {
     if (!BANKS[bank] || bank === this.bank) return;
     this.bank = bank;
     if (!this.ready) return;
+    const active = this.chordInst === this.pad;
     const notes = this.chordNotes;
-    this.releaseChord();
+    if (active) this.releaseChord();
     this.pad.dispose();
     this.pad = makePad(bank).connect(this.padFilter);
+    if (!active) return; // un instrument enregistré joue : la banque servira au retour sur « synthé »
+    this.chordInst = this.pad;
     this.applyEnvelope();
     if (notes.length) this.setChord(notes);
   }
@@ -194,13 +257,13 @@ export class LiveAudio {
     this.chordNotes = [...notes];
     if (this.arpRate) return; // l'arpège lit chordNotes à chaque pas
     const f = (m) => Tone.Frequency(m, 'midi').toFrequency();
-    if (off.length) this.pad.triggerRelease(off.map(f), time);
-    if (on.length) this.pad.triggerAttack(on.map(f), time, 0.55);
+    if (off.length) this.chordInst.triggerRelease(off.map(f), time);
+    if (on.length) this.chordInst.triggerAttack(on.map(f), time, 0.55);
   }
 
   releaseChord(time = Tone.now()) {
     if (!this.ready) return;
-    this.pad.releaseAll(time);
+    this.chordInst.releaseAll(time);
     this.chordNotes = [];
   }
 
@@ -215,7 +278,14 @@ export class LiveAudio {
   applyEnvelope() {
     if (!this.ready) return;
     const e = this.envelope;
-    this.pad.set({ envelope: { attack: 0.005 + e * 1.2, release: (this.padRelease ?? 1.5) + e * 2 } });
+    const attack = 0.005 + e * 1.2;
+    const release = (this.padRelease ?? 1.5) + e * 2;
+    if (this.chordInst instanceof Tone.Sampler) {
+      this.chordInst.attack = attack;
+      this.chordInst.release = release;
+    } else {
+      this.chordInst.set({ envelope: { attack, release } });
+    }
   }
 
   // --- Sculpt ---------------------------------------------------------------------------------
@@ -225,7 +295,7 @@ export class LiveAudio {
     if (rate === this.arpRate || !this.ready) return;
     const notes = this.chordNotes;
     if (rate && !this.arpRate) {
-      this.pad.releaseAll();
+      this.chordInst.releaseAll();
       this.arpLoop.start(this.transport.nextSubdivision('16n'));
     } else if (!rate && this.arpRate) {
       this.arpLoop.stop();
@@ -272,6 +342,15 @@ export class LiveAudio {
   leadOn(voice, midi) {
     if (!this.ready) return;
     const f = Tone.Frequency(midi, 'midi').toFrequency();
+    if (this.leadSampler) {
+      // Instrument enregistré : chaque changement de couloir rejoue la note.
+      const old = this.leadNotes[voice];
+      if (old === midi) return;
+      if (old !== null) this.leadSampler.triggerRelease(Tone.Frequency(old, 'midi').toFrequency());
+      this.leadSampler.triggerAttack(f, Tone.now(), 0.8);
+      this.leadNotes[voice] = midi;
+      return;
+    }
     if (this.leadNotes[voice] === null) this.leads[voice].triggerAttack(f);
     else if (this.leadNotes[voice] !== midi) this.leads[voice].setNote(f);
     this.leadNotes[voice] = midi;
@@ -279,7 +358,8 @@ export class LiveAudio {
 
   leadOff(voice) {
     if (!this.ready || this.leadNotes[voice] === null) return;
-    this.leads[voice].triggerRelease();
+    if (this.leadSampler) this.leadSampler.triggerRelease(Tone.Frequency(this.leadNotes[voice], 'midi').toFrequency());
+    else this.leads[voice].triggerRelease();
     this.leadNotes[voice] = null;
   }
 

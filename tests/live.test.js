@@ -164,3 +164,53 @@ describe('orientation de la paume', () => {
     expect(palmFacingCamera(image, 'Left')).toBe(false); // vraie main droite vue de dos
   });
 });
+
+import { sampleUrls, cycleInstrument, INSTRUMENTS, fileToNote } from '../src/live/instruments.js';
+import { puppetPoints, blendPose, POSES } from '../src/live/puppet.js';
+import { LESSONS, sampleLesson } from '../src/live/tutorial.js';
+
+describe('instruments', () => {
+  it('convertit les noms de fichiers en notes', () => {
+    expect(fileToNote('As4')).toBe('A#4');
+    const urls = sampleUrls('violin');
+    expect(urls.A4).toBe('A4.mp3');
+    expect(sampleUrls('synth')).toBeNull();
+  });
+
+  it('passe à l\'instrument suivant / précédent en boucle', () => {
+    expect(cycleInstrument('piano', 1)).toBe(INSTRUMENTS[1].id);
+    expect(cycleInstrument('piano', -1)).toBe(INSTRUMENTS[INSTRUMENTS.length - 1].id);
+  });
+});
+
+describe('main animée du tutoriel', () => {
+  const tipY = (pose, f) => puppetPoints(pose).fingers[f][3].y;
+
+  it('un doigt replié a son bout plus bas qu\'un doigt tendu', () => {
+    expect(tipY(POSES.fist, 1)).toBeGreaterThan(tipY(POSES.open, 1));
+  });
+
+  it('le pincement amène le bout du pouce sur le bout de l\'index', () => {
+    const { thumb, fingers } = puppetPoints(POSES.pinchIndex);
+    expect(Math.hypot(thumb[3].x - fingers[0][3].x, thumb[3].y - fingers[0][3].y)).toBeLessThan(1e-9);
+  });
+
+  it('interpole les poses sans valeur invalide', () => {
+    const mid = blendPose(POSES.fist, POSES.pinchIndex, 0.5);
+    const pts = puppetPoints(mid);
+    for (const p of [...pts.thumb, ...pts.fingers.flat()]) expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+  });
+
+  it('chaque leçon a une animation et une vérification', () => {
+    for (const lesson of LESSONS) {
+      expect(typeof lesson.check).toBe('function');
+      expect(sampleLesson(lesson, 'left', 0.5) || sampleLesson(lesson, 'right', 0.5)).toBeTruthy();
+    }
+  });
+
+  it('la leçon « silence » se valide quand les deux poings ont coupé le son', () => {
+    const lesson = LESSONS.find((l) => l.title === 'silence');
+    expect(lesson.check({ mutes: 1 }, { mutes: 0 })).toBe(true);
+    expect(lesson.check({ mutes: 0 }, { mutes: 0 })).toBe(false);
+  });
+});

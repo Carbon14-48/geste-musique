@@ -32,18 +32,36 @@
     </section>
 
     <nav id="rail" class="rail" hidden>
+      <select id="instrument" aria-label="Instrument"></select>
       <button id="btn-rec">● enregistrer</button>
       <select id="rec-format" aria-label="Format de la prise"></select>
       <button id="btn-settings">réglages</button>
+      <button id="btn-tutor">comment jouer</button>
       <button id="btn-help">aide</button>
     </nav>
+
+    <aside id="tutor" class="tutor" hidden aria-label="Tutoriel animé">
+      <header>
+        <span class="kicker">comment jouer · <span id="tutor-step"></span></span>
+        <button id="tutor-close" aria-label="Fermer le tutoriel">×</button>
+      </header>
+      <canvas id="tutor-canvas"></canvas>
+      <h2 id="tutor-title"></h2>
+      <p id="tutor-text"></p>
+      <p id="tutor-status" class="tutor-status"></p>
+      <div class="tutor-nav">
+        <button id="tutor-prev">← précédent</button>
+        <button id="tutor-next">suivant →</button>
+      </div>
+      <p class="kicker small-note">touche H : afficher / masquer</p>
+    </aside>
 
     <aside id="panel-settings" class="panel" hidden>
       <header><h2>réglages</h2><button data-close aria-label="Fermer">×</button></header>
       <h3>morceau</h3>
       <label>tonalité <select id="set-root"></select> <select id="set-mode"></select></label>
       <label>tempo <input id="set-bpm" type="range" min="60" max="160" step="1" /> <output id="bpm-out"></output> bpm</label>
-      <label>son des accords <select id="set-bank"></select></label>
+      <label>son « synthé » <select id="set-bank"></select></label>
       <label class="check"><input type="checkbox" id="set-snap" /> caler les accords sur la croche suivante</label>
       <h3>caméra</h3>
       <label class="check"><input type="checkbox" id="set-mirror" /> image miroir</label>
@@ -52,8 +70,9 @@
       <label class="check"><input type="checkbox" id="set-simpleArc" /> arc simplifié (tout poing ouvre l'arc)</label>
       <label>voile sur la caméra <input id="set-scrim" type="range" min="0" max="0.9" step="0.05" /></label>
       <h3>clavier</h3>
-      <p><kbd>1</kbd>–<kbd>5</kbd> mode · <kbd>0</kbd> aucun · <kbd>R</kbd> enregistrer · <kbd>espace</kbd> silence</p>
+      <p><kbd>1</kbd>–<kbd>5</kbd> mode · <kbd>0</kbd> aucun · <kbd>←</kbd> <kbd>→</kbd> instrument · <kbd>R</kbd> enregistrer · <kbd>espace</kbd> silence · <kbd>H</kbd> tutoriel</p>
       <p><a class="link" href="studio.html">ouvrir le studio →</a></p>
+      <p class="credit"><span id="credit"></span> · <a class="link" href="https://github.com/nbrosowsky/tonejs-instruments" target="_blank" rel="noopener">source</a></p>
     </aside>
 
     <aside id="panel-help" class="panel" hidden>
@@ -68,9 +87,15 @@
         <li><b>hauteur</b> : bas = triade, plus haut = 7e, 9e, 13e (en direct)</li>
         <li><b>tourner le poignet</b> : filtre et longueur des notes</li>
         <li>lâcher la pose arrête l'accord ; la refaire le rejoue</li>
+        <li><b>balayer la main ouverte</b> à droite / à gauche (ou pouce levé / baissé tenu) : instrument suivant / précédent</li>
       </ul>
-      <h3>main droite · l'arc des modes</h3>
+      <h3>les deux mains</h3>
       <ul>
+        <li><b>deux poings fermés</b> : silence ; plus de 1,5 s : tout s'arrête (batterie, basse…)</li>
+      </ul>
+      <h3>main droite · la mélodie et l'arc des modes</h3>
+      <ul>
+        <li>au départ, la main droite joue la <b>mélodie</b> : pincez pouce + index, la hauteur choisit la note</li>
         <li><b>poing, dos à la caméra</b> : l'arc apparaît</li>
         <li><b>glisser</b> à gauche / à droite : choisir une case</li>
         <li><b>ouvrir la main</b> paume vers la caméra : valider · dos vers la caméra : annuler</li>
