@@ -1,0 +1,11 @@
+node_modules/
+dist/
+public/mediapipe/
+public/models/hand_landmarker.task
+training/.venv/
+training/data/
+training/output/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store

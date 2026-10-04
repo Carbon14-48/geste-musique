@@ -1,0 +1,9 @@
+# Python 3.10 à 3.12 (TensorFlow ne gère pas encore les versions plus récentes).
+# Sur Google Colab, seul mediapipe est à installer (tensorflow et tf_keras y sont déjà).
+tensorflow>=2.16
+tf_keras  # même version que tensorflow : TF.js lit les modèles Keras 2 (export maison dans common.py)
+mediapipe>=0.10.14
+opencv-python-headless>=4.8
+scikit-learn>=1.3
+numpy>=1.24
+pytest>=7

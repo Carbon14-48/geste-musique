@@ -1,0 +1,24 @@
+{
+  "name": "geste-musique",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Jouer de la musique avec les mains devant une webcam (MediaPipe + TensorFlow.js + Tone.js).",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "postinstall": "node scripts/setup.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "tone": "^15.1.22"
+  },
+  "devDependencies": {
+    "vite": "^8.3.2",
+    "vitest": "^4.1.11"
+  }
+}
