@@ -45,13 +45,14 @@ export const LESSONS = [
   },
   {
     title: 'changer d\'instrument',
-    text: 'Main gauche ouverte : balayez vite vers la droite (suivant) ou vers la gauche (précédent). Pouce levé tenu marche aussi.',
-    arrow: { y: 0.25, from: 0.2, to: 0.6, horizontal: true },
+    text: 'Main gauche : tenez le poing une demi-seconde, la roue apparaît. Tournez le poignet pour choisir, puis ouvrez la main pour valider.',
     frames: [
-      { at: 0, left: L(P.palm, 0.2, 0.6) },
-      { at: 0.35, left: L(P.palm, 0.6, 0.6) },
-      { at: 0.6, left: L(P.palm, 0.6, 0.6) },
-      { at: 1, left: L(P.palm, 0.2, 0.6) },
+      { at: 0, left: L(P.palm) },
+      { at: 0.15, left: L(P.fist) },
+      { at: 0.35, left: L({ ...P.fist, rot: -30 }) },
+      { at: 0.6, left: L({ ...P.fist, rot: 30 }) },
+      { at: 0.8, left: L({ ...P.palm, rot: 30 }) },
+      { at: 1, left: L(P.palm) },
     ],
     check: (s, b) => s.instrumentChanges > b.instrumentChanges,
   },
@@ -93,7 +94,7 @@ export const LESSONS = [
   },
   {
     title: 'silence',
-    text: 'Fermez les deux mains : tout se tait. Gardez-les fermées plus d\'une seconde pour tout arrêter.',
+    text: 'Serrez bien les deux poings : tout se tait. Gardez-les fermées plus d\'une seconde pour tout arrêter.',
     frames: [
       { at: 0, left: L(P.open), right: R(P.open) },
       { at: 0.35, left: L(P.fist), right: R(P.fist) },

@@ -1,4 +1,5 @@
-// Geste Live : main gauche = accords, main droite = arc de 5 modes (batterie, basse, mélodie, fx, sculpt).
+// Geste Live : main gauche = accords et roue d'instruments, main droite = arc de 5 modes
+// (batterie, basse, mélodie, fx, sculpt). Poses reconnues par les règles ou par un modèle TensorFlow.js.
 
 import './live.css';
 import { HandDetector } from '../core/detector.js';
@@ -13,10 +14,13 @@ import { TakeRecorder } from './recorder.js';
 import { NOTES_FR, keyName } from './theory.js';
 import { INSTRUMENTS, SAMPLE_CREDIT, cycleInstrument, instrumentInfo } from './instruments.js';
 import { Tutorial } from './tutorial.js';
-import { Cooldown } from '../core/trigger.js';
+import { InstrumentWheel } from './wheel.js';
+import { MuteDetector } from './mute.js';
+import { PoseModel } from '../ml/models.js';
+import { BrowserPoseModel, TRAINABLE_POSES } from '../ml/trainer.js';
 
 const $ = (id) => document.getElementById(id);
-const STORE = 'geste-live.settings.v1';
+const STORE = 'geste-live.settings.v2'; // v2 : rôles des mains corrigés, nouveaux réglages d'image
 
 const DEFAULTS = {
   root: 9,
@@ -28,7 +32,8 @@ const DEFAULTS = {
   swap: false,
   invertPalm: false,
   simpleArc: false,
-  scrim: 0.5,
+  scrim: 0.25,
+  enhance: true,
   format: 'wide',
   instrument: 'piano',
   tutor: true, // tutoriel ouvert au premier lancement
@@ -59,10 +64,15 @@ class GesteLive {
     this.recorder = new TakeRecorder();
     this.mode = 'melody'; // la main droite joue la mélodie dès le départ
     this.frame = null;
+    this.mute = new MuteDetector();
     this.muted = false;
     this.mutedSince = 0;
     this.panicked = false;
-    this.instrumentCd = new Cooldown(700);
+    this.wheel = new InstrumentWheel({ count: INSTRUMENTS.length });
+    this.chordPauseUntil = 0; // pas d'accord juste après avoir validé la roue (main ouverte = V)
+    this.learnSamples = []; // {label, x} enregistrés pour l'entraînement TensorFlow
+    this.learning = null; // {label, until}
+    this.modelSource = 'règles géométriques';
     this.loadingInstrument = null;
     // Compteurs utilisés par le tutoriel pour savoir si un geste a été réussi.
     this.stats = {
@@ -129,7 +139,7 @@ class GesteLive {
     $('set-bpm').value = this.s.bpm;
     $('bpm-out').textContent = this.s.bpm;
     $('set-scrim').value = this.s.scrim;
-    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc']) $(`set-${k}`).checked = this.s[k];
+    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc', 'enhance']) $(`set-${k}`).checked = this.s[k];
 
     const bind = (id, key, parse = (v) => v) => {
       $(id).addEventListener('input', (e) => {
@@ -146,12 +156,14 @@ class GesteLive {
     bind('set-bank', 'bank');
     bind('set-scrim', 'scrim', Number);
     bind('rec-format', 'format');
-    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc']) bind(`set-${k}`, k);
+    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc', 'enhance']) bind(`set-${k}`, k);
 
     $('start').addEventListener('click', () => this.start());
     $('btn-rec').addEventListener('click', () => this.toggleRecord());
     $('btn-settings').addEventListener('click', () => this.togglePanel('settings'));
     $('btn-help').addEventListener('click', () => this.togglePanel('help'));
+    $('btn-learn').addEventListener('click', () => this.togglePanel('learn'));
+    this.initLearn();
     $('intro-help').addEventListener('click', () => this.toggleTutor(true));
     $('btn-tutor').addEventListener('click', () => this.toggleTutor());
     $('tutor-close').addEventListener('click', () => this.toggleTutor(false));
@@ -188,7 +200,7 @@ class GesteLive {
 
   /** Ouvre le panneau demandé (ou le referme s'il était déjà ouvert) ; null ferme tout. */
   togglePanel(name) {
-    for (const p of ['settings', 'help']) {
+    for (const p of ['settings', 'help', 'learn']) {
       const el = $(`panel-${p}`);
       el.hidden = !(name === p && el.hidden);
     }
@@ -244,13 +256,10 @@ class GesteLive {
         this.bar = b;
       };
       this.applySettings();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user', frameRate: { ideal: 30 } },
-        audio: false,
-      });
-      this.video.srcObject = stream;
+      this.video.srcObject = await this.openCamera();
       await this.video.play();
       await this.detector.init({ numHands: 2 });
+      await this.loadPoseModel();
       this.started = true;
       $('intro').hidden = true;
       $('rail').hidden = false;
@@ -265,6 +274,134 @@ class GesteLive {
           ? 'La caméra est bloquée : autorisez-la avec l\'icône de caméra dans la barre d\'adresse, puis réessayez.'
           : `Impossible de démarrer : ${err?.message ?? err}`;
       $('intro-error').textContent = msg;
+    }
+  }
+
+  /** Caméra en 1080p si possible (720p sinon), avec exposition et balance des blancs automatiques. */
+  async openCamera() {
+    const ask = (w, h) =>
+      navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: w }, height: { ideal: h }, facingMode: 'user', frameRate: { ideal: 30 } },
+        audio: false,
+      });
+    let stream;
+    try {
+      stream = await ask(1920, 1080);
+    } catch (err) {
+      if (err?.name === 'NotAllowedError') throw err;
+      stream = await ask(1280, 720);
+    }
+    const track = stream.getVideoTracks()[0];
+    const caps = track.getCapabilities?.() ?? {};
+    const advanced = {};
+    if (caps.exposureMode?.includes('continuous')) advanced.exposureMode = 'continuous';
+    if (caps.whiteBalanceMode?.includes('continuous')) advanced.whiteBalanceMode = 'continuous';
+    if (caps.focusMode?.includes('continuous')) advanced.focusMode = 'continuous';
+    if (Object.keys(advanced).length) await track.applyConstraints({ advanced: [advanced] }).catch(() => {});
+    return stream;
+  }
+
+  // --- TensorFlow ------------------------------------------------------------------------------
+
+  /** Modèle personnel (entraîné dans la page) en priorité, sinon le modèle Python, sinon les règles. */
+  async loadPoseModel() {
+    const own = await BrowserPoseModel.load();
+    if (own) return this.useModel(own, 'TensorFlow.js · vos gestes');
+    try {
+      const python = await PoseModel.load();
+      if (python) return this.useModel(python, 'TensorFlow.js · modèle Python');
+    } catch (err) {
+      console.warn('modèle de poses illisible', err);
+    }
+    this.useModel(null, 'règles géométriques');
+  }
+
+  useModel(model, source) {
+    this.tracker.poseModel = model;
+    this.modelSource = source;
+    $('learn-source').textContent = source;
+  }
+
+  initLearn() {
+    const box = $('learn-poses');
+    this.learnButtons = {};
+    for (const { label, name } of TRAINABLE_POSES) {
+      const b = document.createElement('button');
+      b.innerHTML = `${name} <span class="n">0</span>`;
+      b.addEventListener('click', () => this.recordPose(label));
+      box.append(b);
+      this.learnButtons[label] = b;
+    }
+    $('learn-train').addEventListener('click', () => this.trainModel());
+    $('learn-reset').addEventListener('click', async () => {
+      this.learnSamples = [];
+      this.updateLearnCounts();
+      await BrowserPoseModel.remove();
+      await this.loadPoseModel();
+      $('learn-status').textContent = 'modèle personnel effacé';
+    });
+  }
+
+  updateLearnCounts() {
+    for (const [label, b] of Object.entries(this.learnButtons)) {
+      b.querySelector('.n').textContent = this.learnSamples.filter((s) => s.label === label).length;
+      b.classList.toggle('recording', this.learning?.label === label);
+    }
+  }
+
+  recordPose(label) {
+    if (!this.started) {
+      $('learn-status').textContent = 'commencez d\'abord (bouton « commencer »)';
+      return;
+    }
+    // Une seconde pour se mettre en place, puis 3 secondes d'enregistrement.
+    this.learning = { label, from: performance.now() + 1000, until: performance.now() + 4000 };
+    $('learn-status').textContent = 'préparez la pose…';
+    this.updateLearnCounts();
+  }
+
+  /** Appelé à chaque image : ajoute les mains visibles à la pose en cours d'enregistrement. */
+  collectSample(frame, t) {
+    const L = this.learning;
+    if (!L || t < L.from) return;
+    if (t > L.until) {
+      this.learning = null;
+      $('learn-status').textContent = 'pose enregistrée';
+      this.updateLearnCounts();
+      return;
+    }
+    for (const hand of [frame.hands.left, frame.hands.right]) {
+      if (hand) this.learnSamples.push({ label: L.label, x: Array.from(hand.features) });
+    }
+    $('learn-status').textContent = `enregistrement… ${((L.until - t) / 1000).toFixed(1)} s`;
+    if (Math.round(t / 100) % 3 === 0) this.updateLearnCounts();
+  }
+
+  async trainModel() {
+    const status = $('learn-status');
+    const bar = $('learn-progress');
+    const n = new Set(this.learnSamples.map((s) => s.label)).size;
+    if (n < 2) {
+      status.textContent = 'enregistrez au moins deux poses (idéalement toutes)';
+      return;
+    }
+    bar.hidden = false;
+    status.textContent = 'entraînement…';
+    try {
+      const model = await BrowserPoseModel.train(this.learnSamples, {
+        onProgress: (epoch, epochs, acc) => {
+          bar.value = epoch / epochs;
+          status.textContent = `entraînement… ${epoch}/${epochs} · précision ${(acc * 100).toFixed(0)} %`;
+        },
+      });
+      await model.save().catch(() => {}); // sans IndexedDB : modèle gardé pour cette session
+      this.useModel(model, 'TensorFlow.js · vos gestes');
+      status.textContent = `modèle prêt · précision ${(model.accuracy * 100).toFixed(0)} % · ${this.learnSamples.length} exemples`;
+      this.plate.say('reconnaissance : TensorFlow');
+    } catch (err) {
+      status.textContent = `échec : ${err?.message ?? err}`;
+    } finally {
+      bar.hidden = true;
     }
   }
 
@@ -307,10 +444,22 @@ class GesteLive {
     this.frame = frame;
     const L = frame.hands.left;
     const R = frame.hands.right;
+    this.collectSample(frame, t);
 
-    // Main gauche : accords.
+    // Main gauche : roue d'instruments (poing tenu, rotation du poignet, main ouverte pour valider).
+    const current = INSTRUMENTS.findIndex((i) => i.id === this.s.instrument);
+    const wev = this.wheel.update(L, Math.max(0, current), t, R?.label === 'fist');
+    if (wev.type === 'opened') this.plate.say('roue : tournez le poignet, ouvrez la main');
+    else if (wev.type === 'selected') {
+      this.chordPauseUntil = t + 700;
+      if (wev.index !== current) this.changeInstrument(INSTRUMENTS[wev.index].id);
+      else this.plate.say(`instrument : ${INSTRUMENTS[wev.index].name}`);
+    }
+
+    // Main gauche : accords (en pause pendant la roue).
+    const chordHand = this.wheel.open || t < this.chordPauseUntil ? null : L;
     const prev = this.chordState;
-    this.chordState = this.chordHand.update(L, this.key, L ? this.norm(L.height) : 0, t);
+    this.chordState = this.chordHand.update(chordHand, this.key, L ? this.norm(L.height) : 0, t);
     this.audio.chord = this.chordHand.chord;
     const cs = this.chordState;
     if (cs && (!prev || prev.name !== cs.name)) {
@@ -319,24 +468,19 @@ class GesteLive {
       if (cs.spice >= 2) this.stats.richChords++;
     }
 
-    // Main gauche : changer d'instrument (balayage, ou pouce levé / baissé tenu).
-    for (const e of frame.events) {
-      if (e.hand !== 'left') continue;
-      let step = 0;
-      if (e.type === 'swipe_right' || (e.type === 'pose_hold' && e.label === 'like')) step = 1;
-      else if (e.type === 'swipe_left' || (e.type === 'pose_hold' && e.label === 'dislike')) step = -1;
-      if (step && this.instrumentCd.ready(t)) this.changeInstrument(cycleInstrument(this.s.instrument, step));
-    }
-
-    // Deux poings fermés : silence (plus d'une seconde et demie : tout s'arrête).
-    if (L?.label === 'fist' && R?.label === 'fist') {
-      if (!this.muted) {
+    // Deux poings bien serrés : silence (plus d'une seconde et demie : tout s'arrête).
+    // Détecteur strict : une main à moitié fermée ne suffit pas.
+    const mute = this.mute.update(L, R);
+    if (mute.muted) {
+      if (mute.changed) {
         this.muted = true;
         this.mutedSince = t;
         this.panicked = false;
         this.stats.mutes++;
         this.audio.setMuted(true);
         this.arc.reset();
+        this.wheel.reset();
+        this.wheel.armed = false;
         if (this.mode && this.pinch.finger !== null) this.modes[this.mode].release(this.pinch.finger);
         this.pinch.reset();
       } else if (!this.panicked && t - this.mutedSince > 1500) {
@@ -388,6 +532,9 @@ class GesteLive {
       video: this.video,
       mirror: this.s.mirror,
       scrim: this.s.scrim,
+      enhance: this.s.enhance,
+      wheel: { open: this.wheel.open, hover: this.wheel.hover, anchor: this.wheel.anchor, items: INSTRUMENTS },
+      modelSource: this.modelSource,
       started: this.started,
       hands: { left: L, right: R },
       chord: this.chordState,

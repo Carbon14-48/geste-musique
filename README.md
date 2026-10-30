@@ -19,15 +19,21 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
   - 1 à 4 doigts = accords I à IV, main ouverte = V, cornes = VI, cornes + pouce = VII ;
   - dos de la main = mode parallèle ; doigts vers le bas = un demi-ton plus bas ;
   - hauteur de la main = triade, puis 7e, 9e et 13e ;
-  - rotation du poignet = filtre.
+  - rotation du poignet = filtre ;
+  - **poing tenu ½ s = roue d'instruments** : on tourne le poignet pour choisir, puis on ouvre la main pour valider.
 - **Main droite** :
   - poing dos à la caméra → l'arc des modes apparaît ; on glisse, puis on ouvre la main pour choisir ;
   - pincer le pouce avec un doigt choisit une piste, et la rotation du poignet règle sa valeur.
 - **Instruments enregistrés** : piano, guitares, violon, violoncelle, flûte, saxophone, clarinette, trompette, harpe, orgue, harmonium, xylophone, ou synthé.
-  - On les choisit dans la barre du bas, avec <kbd>←</kbd> <kbd>→</kbd>, ou en **balayant la main gauche ouverte** (pouce levé ou baissé tenu marche aussi).
+  - On les choisit avec la **roue de la main gauche**, dans la barre du bas, ou avec <kbd>←</kbd> <kbd>→</kbd>.
   - La mélodie de la main droite utilise le même instrument.
 - **Main droite = mélodie dès le départ** : pincer le pouce avec l'index, la hauteur de la main choisit la note.
-- **Deux poings fermés = silence**. Au-delà de 1,5 s, tout s'arrête.
+- **Deux poings bien serrés = silence**, après ¼ s. Une main à moitié fermée ne déclenche rien. Au-delà de 1,5 s, tout s'arrête.
+- **TensorFlow.js** : bouton *apprendre* dans la barre du bas.
+  - Un petit réseau s'entraîne dans la page, sur vos propres mains.
+  - Il est sauvegardé dans le navigateur.
+  - Sans lui, le modèle Python de `public/models/pose/` est utilisé s'il existe, sinon les règles géométriques.
+- **Affichage** : seul le panneau de la main active s'affiche. L'image de la caméra est demandée en 1080p et éclaircie (réglage *améliorer l'image*).
 - **Tutoriel « comment jouer »** à droite : 8 leçons avec des mains animées. Chaque leçon se valide toute seule quand le geste est réussi devant la caméra (touche <kbd>H</kbd>).
 - **Enregistrement** d'une prise vidéo + son, en format large ou vertical 720×1280, entièrement dans le navigateur.
 
@@ -47,7 +53,7 @@ Placez-vous à 50–80 cm de la caméra, bien éclairé de face.
 Autres commandes :
 
 ```bash
-npm test           # 79 tests unitaires (théorie musicale, arc, pincements, instruments, tutoriel, modes…)
+npm test           # 88 tests unitaires (théorie musicale, arc, pincements, instruments, tutoriel, modes…)
 npm run build      # version statique dans dist/ (GitHub Pages, Netlify…)
 ```
 
@@ -140,6 +146,6 @@ Tout est décrit dans [`training/README.md`](training/README.md), en résumé :
 4. Les modèles sont écrits dans `public/models/pose/` et `public/models/dynamic/`. L'application les charge toute seule au démarrage.
 
 ## Limites connues
-- Si une main est de profil ou si des doigts sont cachés, le comptage se trompe. Quand les mains se croisent, la gauche et la droite peuvent s'inverser. L'option *Inverser main gauche / droite* est dans les Réglages.
+- Si une main est de profil ou si des doigts sont cachés, le comptage se trompe. Quand les mains se croisent, la gauche et la droite peuvent s'inverser. Si une caméra inverse toujours les deux mains, l'option *Inverser main gauche / droite* est dans les Réglages.
 - La latence totale (caméra, détection, stabilisation) est de 100 à 150 ms. Les percussions se déclenchent donc sur le pic de vitesse, sans attendre une pose stable.
 - Le MIDI demande Chrome ou Edge. Firefox et Safari ne le gèrent que partiellement.

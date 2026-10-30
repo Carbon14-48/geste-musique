@@ -36,9 +36,9 @@ export class HandTracker {
   }
 
   roleFromLabel(label) {
-    // MediaPipe suppose une image « selfie » (miroir). Sur l'image brute de la webcam,
-    // « Left » correspond donc à la vraie main droite du musicien.
-    const role = label === 'Left' ? 'right' : 'left';
+    // Essayé devant une vraie webcam : avec HandLandmarker (tasks-vision) sur l'image brute,
+    // « Left » est bien la main gauche du musicien. Le réglage « inverser » reste pour les autres caméras.
+    const role = label === 'Left' ? 'left' : 'right';
     if (!this.swapHands) return role;
     return role === 'left' ? 'right' : 'left';
   }
@@ -187,7 +187,7 @@ export class HandTracker {
       roll: Math.max(0, Math.min(1, 0.5 + tilt / 100)),
       pinches,
       pointsDown: handPointsDown(image),
-      palmFacing: palmFacingCamera(image, handedness) !== this.invertPalm,
+      palmFacing: palmFacingCamera(image, role) !== this.invertPalm,
       label: 'none',
       count: null,
       velocity: { x: 0, y: 0, speed: 0 },

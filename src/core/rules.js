@@ -72,15 +72,15 @@ export function fingerStates(world, th = DEFAULT_THRESHOLDS) {
 }
 
 /**
- * Paume tournée vers la caméra ? (points image non miroir + étiquette MediaPipe brute).
+ * Paume tournée vers la caméra ? (points image non miroir + vraie main du musicien, 'left' ou 'right').
  * Vraie main droite, paume vers la caméra, doigts en haut : sur l'image brute, le pouce est à droite
- * (x grand) et l'auriculaire à gauche, donc z < 0 ; MediaPipe l'étiquette « Left » (image supposée miroir).
+ * (x grand) et l'auriculaire à gauche, donc z < 0.
  */
-export function palmFacingCamera(image, handednessLabel) {
+export function palmFacingCamera(image, side) {
   const v1 = sub(image[LM.INDEX_MCP], image[LM.WRIST]);
   const v2 = sub(image[LM.PINKY_MCP], image[LM.WRIST]);
   const z = v1.x * v2.y - v1.y * v2.x;
-  return handednessLabel === 'Left' ? z < 0 : z > 0;
+  return side === 'right' ? z < 0 : z > 0;
 }
 
 /** Doigts pointés vers le bas : la base du majeur est sous le poignet à l'image. */

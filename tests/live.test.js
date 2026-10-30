@@ -158,10 +158,10 @@ describe('main gauche', () => {
 });
 
 describe('orientation de la paume', () => {
-  it('suit la convention MediaPipe (image brute, étiquette « selfie »)', () => {
+  it('dépend de la vraie main du musicien (image brute)', () => {
     const { image } = synthHand([U, U, U, U, U]); // pouce à gauche de l'image brute
-    expect(palmFacingCamera(image, 'Right')).toBe(true); // vraie main gauche, paume vers la caméra
-    expect(palmFacingCamera(image, 'Left')).toBe(false); // vraie main droite vue de dos
+    expect(palmFacingCamera(image, 'left')).toBe(true); // main gauche, paume vers la caméra
+    expect(palmFacingCamera(image, 'right')).toBe(false); // main droite vue de dos
   });
 });
 
@@ -213,4 +213,112 @@ describe('main animée du tutoriel', () => {
     expect(lesson.check({ mutes: 1 }, { mutes: 0 })).toBe(true);
     expect(lesson.check({ mutes: 0 }, { mutes: 0 })).toBe(false);
   });
+});
+
+import { InstrumentWheel } from '../src/live/wheel.js';
+import { MuteDetector, isTightFist } from '../src/live/mute.js';
+import { HandTracker } from '../src/core/handTracker.js';
+import { openness } from '../src/core/rules.js';
+import { BrowserPoseModel } from '../src/ml/trainer.js';
+import { normalizePose } from '../src/core/landmarks.js';
+import { H } from './helpers/synthHand.js';
+
+describe('rôles des mains', () => {
+  it('l\'étiquette MediaPipe donne directement la main, le réglage « inverser » l\'échange', () => {
+    const tr = new HandTracker();
+    expect(tr.roleFromLabel('Left')).toBe('left');
+    expect(tr.roleFromLabel('Right')).toBe('right');
+    tr.swapHands = true;
+    expect(tr.roleFromLabel('Left')).toBe('right');
+  });
+});
+
+describe('roue d\'instruments', () => {
+  const lh = (label, tilt = 0) => ({ label, tilt, palm: { x: 0.3, y: 0.5 } });
+
+  it('poing tenu -> ouverte, rotation -> instrument suivant, main ouverte -> choix', () => {
+    const w = new InstrumentWheel({ count: 14, summonFrames: 3, stepDeg: 10 });
+    let ev;
+    for (let i = 0; i < 3; i++) ev = w.update(lh('fist', 5), 2, i * 33);
+    expect(ev.type).toBe('opened');
+    expect(w.hover).toBe(2);
+    w.update(lh('fist', 26), 2, 120); // +21° = 2 crans
+    expect(w.hover).toBe(4);
+    w.update(lh('fist', 29), 2, 150); // hystérésis : on reste sur le cran
+    expect(w.hover).toBe(4);
+    expect(w.update(lh('palm', 26), 2, 200)).toEqual({ type: 'selected', index: 4 });
+  });
+
+  it('tourne en boucle dans la liste', () => {
+    const w = new InstrumentWheel({ count: 14, summonFrames: 1, stepDeg: 10 });
+    w.update(lh('fist', 0), 0, 0);
+    w.update(lh('fist', -10), 0, 30);
+    expect(w.hover).toBe(13);
+  });
+
+  it('ne s\'ouvre pas si l\'autre main est aussi un poing (silence), s\'annule si la main disparaît', () => {
+    const w = new InstrumentWheel({ count: 14, summonFrames: 1 });
+    expect(w.update(lh('fist'), 0, 0, true).type).toBe(null);
+    w.update(lh('open'), 0, 10);
+    expect(w.update(lh('fist'), 0, 20).type).toBe('opened');
+    expect(w.update(null, 0, 1000).type).toBe('cancelled');
+  });
+});
+
+describe('silence strict', () => {
+  const hand = (states) => {
+    const { world, image } = synthHand(states);
+    const p = classifyPose(world, image);
+    return { rawLabel: p.label, fingers: p.fingers, openness: openness(world) };
+  };
+  const fist = hand([D, D, D, D, D]);
+  const halfFist = hand([D, H, D, D, D]); // un doigt à moitié replié : encore « fist » pour les règles
+
+  it('un poing franc compte, une main à moitié fermée non', () => {
+    expect(halfFist.rawLabel).toBe('fist');
+    expect(isTightFist(fist)).toBe(true);
+    expect(isTightFist(halfFist)).toBe(false);
+  });
+
+  it('un poing + une main à moitié fermée ne coupent jamais le son', () => {
+    const m = new MuteDetector();
+    for (let i = 0; i < 30; i++) expect(m.update(fist, halfFist).muted).toBe(false);
+  });
+
+  it('deux poings tenus 8 images coupent le son, une main ouverte 4 images le rend', () => {
+    const m = new MuteDetector();
+    for (let i = 0; i < 7; i++) expect(m.update(fist, fist).muted).toBe(false);
+    expect(m.update(fist, fist)).toEqual({ muted: true, changed: true });
+    const open = hand([U, U, U, U, U]);
+    for (let i = 0; i < 3; i++) expect(m.update(fist, open).muted).toBe(true);
+    expect(m.update(fist, open)).toEqual({ muted: false, changed: true });
+  });
+
+  it('une image ratée au milieu remet le compteur à zéro', () => {
+    const m = new MuteDetector();
+    for (let i = 0; i < 6; i++) m.update(fist, fist);
+    m.update(fist, halfFist);
+    for (let i = 0; i < 7; i++) expect(m.update(fist, fist).muted).toBe(false);
+  });
+});
+
+describe('entraînement TensorFlow.js dans le navigateur', () => {
+  it('apprend des poses synthétiques', async () => {
+    const shapes = { fist: [D, D, D, D, D], one: [D, U, D, D, D], palm: [U, U, U, U, U], rock: [D, U, D, D, U] };
+    const samples = [];
+    for (const [label, st] of Object.entries(shapes)) {
+      for (let i = 0; i < 25; i++) {
+        const { world } = synthHand(st, { rotateDeg: (i - 12) * 2 });
+        const jitter = world.map((p) => ({ x: p.x + (Math.random() - 0.5) * 0.004, y: p.y + (Math.random() - 0.5) * 0.004, z: p.z }));
+        samples.push({ label, x: normalizePose(jitter, 'Right') });
+      }
+    }
+    const model = await BrowserPoseModel.train(samples, { epochs: 60 });
+    let ok = 0;
+    for (const [label, st] of Object.entries(shapes)) {
+      const { world } = synthHand(st, { rotateDeg: 7 });
+      if (model.predict(normalizePose(world, 'Right')).label === label) ok++;
+    }
+    expect(ok / 4).toBeGreaterThanOrEqual(0.9);
+  }, 30000);
 });
