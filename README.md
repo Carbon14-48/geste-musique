@@ -33,7 +33,7 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
   - Un petit réseau s'entraîne dans la page, sur vos propres mains.
   - Il est sauvegardé dans le navigateur.
   - Sans lui, le modèle Python de `public/models/pose/` est utilisé s'il existe, sinon les règles géométriques.
-- **Affichage** : seul le panneau de la main active s'affiche. L'image de la caméra est demandée en 1080p et éclaircie (réglage *améliorer l'image*).
+- **Affichage** : seul le panneau de la main active s'affiche. L'image de la caméra est en 720p, éclaircie par un filtre CSS (réglage *améliorer l'image*).
 - **Tutoriel « comment jouer »** à droite : 8 leçons avec des mains animées. Chaque leçon se valide toute seule quand le geste est réussi devant la caméra (touche <kbd>H</kbd>).
 - **Enregistrement** d'une prise vidéo + son, en format large ou vertical 720×1280, entièrement dans le navigateur.
 

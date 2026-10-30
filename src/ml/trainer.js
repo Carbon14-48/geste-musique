@@ -4,22 +4,19 @@
 
 import * as tf from '@tensorflow/tfjs';
 import { POSE_DIM } from '../core/landmarks.js';
+import { LABELS_KEY } from './poses.js';
+
+export { TRAINABLE_POSES } from './poses.js';
+
+/**
+ * Le réseau est minuscule : le processeur le fait tourner plus vite que WebGL,
+ * et la carte graphique reste libre pour MediaPipe.
+ */
+export async function useCpu() {
+  if (tf.getBackend() !== 'cpu') await tf.setBackend('cpu');
+}
 
 export const SAVE_URL = 'indexeddb://geste-live-pose';
-const LABELS_KEY = 'geste-live.pose-labels';
-
-/** Poses proposées dans le panneau « Apprendre mes gestes » (étiquettes = celles des règles). */
-export const TRAINABLE_POSES = [
-  { label: 'fist', name: 'poing' },
-  { label: 'one', name: '1 doigt' },
-  { label: 'two', name: '2 doigts' },
-  { label: 'three', name: '3 doigts' },
-  { label: 'four', name: '4 doigts' },
-  { label: 'palm', name: 'main ouverte' },
-  { label: 'rock', name: 'cornes' },
-  { label: 'hornsThumb', name: 'cornes + pouce' },
-  { label: 'other', name: 'autre / main relâchée' },
-];
 
 export function buildModel(classes) {
   const model = tf.sequential();
@@ -42,6 +39,7 @@ export class BrowserPoseModel {
    * @param {{epochs?:number, onProgress?:(epoch:number, epochs:number, acc:number)=>void}} options
    */
   static async train(samples, { epochs = 40, onProgress } = {}) {
+    await useCpu();
     const labels = [...new Set(samples.map((s) => s.label))];
     if (labels.length < 2) throw new Error('il faut au moins deux poses enregistrées');
     const model = buildModel(labels.length);
@@ -73,6 +71,7 @@ export class BrowserPoseModel {
     try {
       const labels = JSON.parse(localStorage.getItem(LABELS_KEY) ?? 'null');
       if (!labels) return null;
+      await useCpu();
       const model = await tf.loadLayersModel(SAVE_URL);
       return new BrowserPoseModel(model, labels);
     } catch {

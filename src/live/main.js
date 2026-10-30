@@ -16,8 +16,7 @@ import { INSTRUMENTS, SAMPLE_CREDIT, cycleInstrument, instrumentInfo } from './i
 import { Tutorial } from './tutorial.js';
 import { InstrumentWheel } from './wheel.js';
 import { MuteDetector } from './mute.js';
-import { PoseModel } from '../ml/models.js';
-import { BrowserPoseModel, TRAINABLE_POSES } from '../ml/trainer.js';
+import { TRAINABLE_POSES, hasSavedModel, hasPythonModel } from '../ml/poses.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'geste-live.settings.v2'; // v2 : rôles des mains corrigés, nouveaux réglages d'image
@@ -106,6 +105,8 @@ class GesteLive {
   }
 
   applySettings() {
+    // Filtre CSS : appliqué par la carte graphique, presque gratuit (ctx.filter, lui, ralentissait tout).
+    this.canvas.style.filter = this.s.enhance ? 'brightness(1.08) contrast(1.1) saturate(1.08)' : '';
     this.tracker.mirror = this.s.mirror;
     this.tracker.swapHands = this.s.swap;
     this.tracker.invertPalm = this.s.invertPalm;
@@ -277,7 +278,7 @@ class GesteLive {
     }
   }
 
-  /** Caméra en 1080p si possible (720p sinon), avec exposition et balance des blancs automatiques. */
+  /** Caméra en 720p (480p sinon), avec exposition et balance des blancs automatiques. */
   async openCamera() {
     const ask = (w, h) =>
       navigator.mediaDevices.getUserMedia({
@@ -286,10 +287,11 @@ class GesteLive {
       });
     let stream;
     try {
-      stream = await ask(1920, 1080);
+      // 720p : au-delà, MediaPipe ralentit beaucoup pour un gain de détection nul.
+      stream = await ask(1280, 720);
     } catch (err) {
       if (err?.name === 'NotAllowedError') throw err;
-      stream = await ask(1280, 720);
+      stream = await ask(640, 480);
     }
     const track = stream.getVideoTracks()[0];
     const caps = track.getCapabilities?.() ?? {};
@@ -305,9 +307,16 @@ class GesteLive {
 
   /** Modèle personnel (entraîné dans la page) en priorité, sinon le modèle Python, sinon les règles. */
   async loadPoseModel() {
-    const own = await BrowserPoseModel.load();
-    if (own) return this.useModel(own, 'TensorFlow.js · vos gestes');
+    // TensorFlow.js (1,3 Mo) n'est chargé que s'il y a un modèle à utiliser.
+    if (hasSavedModel()) {
+      const { BrowserPoseModel } = await import('../ml/trainer.js');
+      const own = await BrowserPoseModel.load();
+      if (own) return this.useModel(own, 'TensorFlow.js · vos gestes');
+    }
     try {
+      if (!(await hasPythonModel())) return this.useModel(null, 'règles géométriques');
+      const [{ PoseModel }, { useCpu }] = await Promise.all([import('../ml/models.js'), import('../ml/trainer.js')]);
+      await useCpu();
       const python = await PoseModel.load();
       if (python) return this.useModel(python, 'TensorFlow.js · modèle Python');
     } catch (err) {
@@ -336,6 +345,7 @@ class GesteLive {
     $('learn-reset').addEventListener('click', async () => {
       this.learnSamples = [];
       this.updateLearnCounts();
+      const { BrowserPoseModel } = await import('../ml/trainer.js');
       await BrowserPoseModel.remove();
       await this.loadPoseModel();
       $('learn-status').textContent = 'modèle personnel effacé';
@@ -388,6 +398,7 @@ class GesteLive {
     bar.hidden = false;
     status.textContent = 'entraînement…';
     try {
+      const { BrowserPoseModel } = await import('../ml/trainer.js');
       const model = await BrowserPoseModel.train(this.learnSamples, {
         onProgress: (epoch, epochs, acc) => {
           bar.value = epoch / epochs;

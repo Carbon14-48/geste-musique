@@ -20,9 +20,6 @@ function label(ctx, text, x, y, { size = 12, color = DIM, align = 'left', spacin
   ctx.save();
   ctx.font = `400 ${size}px ${MONO}`;
   ctx.fillStyle = color;
-  // Ombre portée : le texte reste lisible sur une image de caméra claire.
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
-  ctx.shadowBlur = 4;
   ctx.textBaseline = 'alphabetic';
   const chars = text.toUpperCase().split('');
   const gap = size * spacing;
@@ -107,9 +104,6 @@ export class Plate {
     const vr = this.videoRect(S.video, w, h);
     if (S.video && S.video.readyState >= 2) {
       ctx.save();
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      if (S.enhance) ctx.filter = 'brightness(1.08) contrast(1.12) saturate(1.1)';
       if (S.mirror) {
         ctx.translate(w, 0);
         ctx.scale(-1, 1);
@@ -343,16 +337,18 @@ export class Plate {
   drawHand(ctx, hand, vr, pinchFinger) {
     const P = hand.screen.map((p) => ({ x: vr.x + p.x * vr.w, y: vr.y + p.y * vr.h }));
     ctx.save();
-    ctx.strokeStyle = 'rgba(236, 233, 226, 0.85)';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 3;
-    ctx.lineWidth = 2.5;
+    // Contour sombre puis trait clair : lisible sur une image claire, sans flou d'ombre (coûteux).
+    ctx.beginPath();
     for (const [a, b] of CONNECTIONS) {
-      ctx.beginPath();
       ctx.moveTo(P[a].x, P[a].y);
       ctx.lineTo(P[b].x, P[b].y);
-      ctx.stroke();
     }
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.lineWidth = 4.5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(236, 233, 226, 0.85)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
     ctx.fillStyle = INK;
     for (const p of P) {
       ctx.beginPath();
