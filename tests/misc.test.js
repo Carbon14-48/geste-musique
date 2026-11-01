@@ -3,6 +3,7 @@ import { OneEuroFilter } from '../src/core/oneEuro.js';
 import { degreeToMidi, quantize, midiToName, triad, midiToFreq } from '../src/core/scale.js';
 import { KnnClassifier } from '../src/ml/knn.js';
 import { encodeMidiFile } from '../src/audio/midiFile.js';
+import { hasSavedModel, hasPythonModel } from '../src/ml/poses.js';
 
 describe('OneEuroFilter', () => {
   it('garde une valeur constante', () => {
@@ -47,6 +48,33 @@ describe('KnnClassifier', () => {
     expect(knn.predict([0.02, 0.01]).label).toBe('a');
     expect(knn.predict([0.98, 1.02]).label).toBe('b');
     expect(knn.countByLabel()).toEqual({ a: 5, b: 5 });
+  });
+
+  it('exporter puis importer (toJSON/load) retrouve exactement les mêmes gestes', () => {
+    const knn = new KnnClassifier();
+    knn.add('griffe', [0.1, 0.2]);
+    knn.add('poing_leve', [0.9, 0.8]);
+    const reloaded = new KnnClassifier();
+    reloaded.load(JSON.parse(JSON.stringify(knn.toJSON())));
+    expect(reloaded.countByLabel()).toEqual(knn.countByLabel());
+    expect(reloaded.predict([0.1, 0.2]).label).toBe('griffe');
+  });
+
+  it('save()/restore() ne plantent jamais, même sans stockage disponible', () => {
+    const knn = new KnnClassifier();
+    knn.add('a', [0, 0]);
+    expect(() => knn.save()).not.toThrow();
+    expect(() => knn.restore()).not.toThrow();
+  });
+});
+
+describe('repli sur la reconnaissance standard', () => {
+  it('hasSavedModel() répond sans planter quand aucun geste personnalisé n\'a été enregistré', () => {
+    expect(hasSavedModel()).toBe(false);
+  });
+
+  it('hasPythonModel() répond sans planter quand le modèle avancé est absent', async () => {
+    await expect(hasPythonModel()).resolves.toBe(false);
   });
 });
 

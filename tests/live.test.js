@@ -4,7 +4,7 @@ import { drumBar, bassStep } from '../src/live/patterns.js';
 import { PinchTracker } from '../src/live/pinch.js';
 import { ArcSelector } from '../src/live/arc.js';
 import { ChordHand } from '../src/live/chordHand.js';
-import { laneNote } from '../src/live/rightModes.js';
+import { laneNote, createModes } from '../src/live/rightModes.js';
 import { classifyPose, palmFacingCamera } from '../src/core/rules.js';
 import { synthHand, U, D } from './helpers/synthHand.js';
 
@@ -299,6 +299,89 @@ describe('silence strict', () => {
     for (let i = 0; i < 6; i++) m.update(fist, fist);
     m.update(fist, halfFist);
     for (let i = 0; i < 7; i++) expect(m.update(fist, fist).muted).toBe(false);
+  });
+});
+
+function fakeAudio() {
+  const calls = [];
+  return {
+    calls,
+    drumLevels: [0, 0, 0, 0],
+    bassParams: null,
+    setDrumCutoff: (v) => calls.push(['cutoff', v]),
+    setBassResonance: (v) => calls.push(['resonance', v]),
+    leadOn: (f, n) => calls.push(['leadOn', f, n]),
+    leadOff: (f) => calls.push(['leadOff', f]),
+    setLeadFilter: (v) => calls.push(['leadFilter', v]),
+    setFx: (f, v, on) => calls.push(['fx', f, v, on]),
+    setArp: (v) => calls.push(['arp', v]),
+    setEnvelope: (v) => calls.push(['envelope', v]),
+    setTremolo: (v) => calls.push(['tremolo', v]),
+    setGrit: (v) => calls.push(['grit', v]),
+  };
+}
+
+describe('les 5 modes de la main droite (arc)', () => {
+  it('batterie : la rotation du poignet règle le niveau du pad tenu', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.drums.hold(1, { roll: 0.5 });
+    expect(modes.drums.levels[1]).toBe(2);
+    expect(audio.drumLevels[1]).toBe(2);
+    expect(modes.drums.readout(1)).toContain('caisse claire');
+  });
+
+  it('basse : les 4 pincements règlent densité, notes, octave et groove', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.bass.hold(0, { roll: 0.8 });
+    expect(audio.bassParams.density).toBe(0.8);
+  });
+
+  it('mélodie : la hauteur choisit la note tenue par le doigt pincé', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.melody.key = A_MINOR;
+    modes.melody.hold(1, { roll: 0.2 }, 0.5);
+    const lane = Math.floor(0.5 * 12);
+    expect(audio.calls).toContainEqual(['leadOn', 1, laneNote(A_MINOR, lane, 1)]);
+    modes.melody.release(1);
+    expect(audio.calls).toContainEqual(['leadOff', 1]);
+    expect(modes.melody.lanes[1]).toBeNull();
+  });
+
+  it('fx : actif seulement tant que le doigt est pincé, revient à 0 au relâché', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.fx.hold(2, { roll: 0.6 });
+    expect(modes.fx.active[2]).toBe(true);
+    expect(audio.calls).toContainEqual(['fx', 2, 0.6, true]);
+    modes.fx.release(2);
+    expect(modes.fx.active[2]).toBe(false);
+    expect(audio.calls).toContainEqual(['fx', 2, 0, false]);
+  });
+
+  it('sculpt : chaque doigt pilote un paramètre, en dessous de 0,08 la valeur tombe à 0', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.sculpt.hold(0, { roll: 0.5 });
+    expect(audio.calls).toContainEqual(['arp', 0.5]);
+    modes.sculpt.hold(1, { roll: 0.05 });
+    expect(audio.calls).toContainEqual(['envelope', 0]);
+    modes.sculpt.hold(2, { roll: 0.3 });
+    modes.sculpt.hold(3, { roll: 0.4 });
+    expect(audio.calls).toContainEqual(['tremolo', 0.3]);
+    expect(audio.calls).toContainEqual(['grit', 0.4]);
+  });
+
+  it('sculpt : la hauteur de la main (idle) règle l\'ouverture du voicing', () => {
+    const audio = fakeAudio();
+    const chordHand = { spread: 0 };
+    const modes = createModes(audio, chordHand);
+    modes.sculpt.idle({ roll: 0 }, 0.7);
+    expect(modes.sculpt.spread).toBe(0.7);
+    expect(chordHand.spread).toBe(0.7);
+    expect(modes.sculpt.readout(null)).toContain('70');
   });
 });
 

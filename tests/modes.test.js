@@ -3,8 +3,13 @@ import notes from '../src/modes/notes.js';
 import guitar from '../src/modes/guitar.js';
 import drums from '../src/modes/drums.js';
 import binary from '../src/modes/binary.js';
+import theremin from '../src/modes/theremin.js';
+import piano from '../src/modes/piano.js';
+import dj, { PATTERNS } from '../src/modes/dj.js';
+import custom from '../src/modes/custom.js';
 import { GlobalGestures } from '../src/modes/global.js';
-import { GUITAR_CHORDS } from '../src/core/scale.js';
+import { GUITAR_CHORDS, degreeToMidi } from '../src/core/scale.js';
+import { LM } from '../src/core/landmarks.js';
 
 function fakeApp(mode) {
   const calls = [];
@@ -27,6 +32,10 @@ function fakeApp(mode) {
     setDistortion(on) { this.distortionOn = on; calls.push(['distortion', on]); return on; },
     setWah(on) { this.wahOn = on; return on; },
     setVibrato: () => {},
+    thereminOff: () => calls.push(['thereminOff']),
+    thereminSet: (midi, level) => calls.push(['thereminSet', midi, level]),
+    setBrightness: (v) => calls.push(['brightness', v]),
+    setReverb: (v) => calls.push(['reverb', v]),
   };
   const looper = { toggleRecord: () => calls.push(['loop']), status: () => '', stop: () => calls.push(['loopStop']), undo: () => {} };
   return {
@@ -36,10 +45,11 @@ function fakeApp(mode) {
     mode,
     locked: false,
     settings: { root: 60, scale: 'pentatonique' },
-    notify: () => {},
-    hud: () => {},
+    notify: (m) => calls.push(['notify', m]),
+    hud: (k, v) => calls.push(['hud', k, v]),
     refreshControls: () => {},
     normHeight: (h) => h,
+    knn: { samples: [], labels: [], predict: () => null },
   };
 }
 
@@ -143,5 +153,109 @@ describe('gestes globaux', () => {
     const g = new GlobalGestures(app);
     g.handle(frame([{ type: 'pose_enter', label: 'like', hand: 'right' }]));
     expect(app.calls.filter((c) => c[0] === 'volume')).toEqual([]);
+  });
+});
+
+describe('mode Thérémine', () => {
+  it('la hauteur de la main droite règle une note continue', () => {
+    const app = fakeApp(theremin);
+    theremin.enter(app);
+    theremin.frame(app, frame([], { right: hand({ height: 0.5 }), left: hand({ height: 0.9 }) }));
+    expect(app.calls.some((c) => c[0] === 'thereminSet')).toBe(true);
+  });
+
+  it('un poing (main droite ou gauche) coupe le son', () => {
+    const app = fakeApp(theremin);
+    theremin.enter(app);
+    theremin.frame(app, frame([], { right: hand({ label: 'fist' }) }));
+    expect(app.calls).toContainEqual(['thereminOff']);
+  });
+
+  it('sortir du mode coupe le son', () => {
+    const app = fakeApp(theremin);
+    theremin.enter(app);
+    theremin.exit(app);
+    expect(app.calls).toContainEqual(['thereminOff']);
+  });
+});
+
+describe('mode Piano (clavier dans l\'air)', () => {
+  it('une tape sur l\'index joue la touche visée', () => {
+    const app = fakeApp(piano);
+    piano.enter(app);
+    const screen = Array(21).fill({ x: 0, y: 0 });
+    screen[LM.INDEX_TIP] = { x: 0.3, y: 0.5 };
+    const right = hand({ fingers: [false, true, false, false, false], screen, height: 0.5 });
+    piano.frame(app, frame([{ type: 'tap', hand: 'right', speed: 10 }], { right }));
+    const key = Math.floor(0.3 * 8);
+    const expected = degreeToMidi(app.settings.root, app.settings.scale, key);
+    expect(app.calls).toContainEqual(['playNote', expected]);
+  });
+
+  it('un poing relâche tout', () => {
+    const app = fakeApp(piano);
+    piano.enter(app);
+    const right = hand({ label: 'fist', screen: Array(21).fill({ x: 0, y: 0 }) });
+    piano.frame(app, frame([{ type: 'pose_enter', label: 'fist', hand: 'right' }], { right }));
+    expect(app.calls).toContainEqual(['releaseAll']);
+  });
+});
+
+describe('mode DJ et boucles', () => {
+  function djApp() {
+    const app = fakeApp(dj);
+    dj.pattern = 0;
+    dj.step = 0;
+    dj.bpm = 100;
+    dj.tempo = { tap: () => null };
+    dj.clock = {
+      state: 'stopped',
+      start() { this.state = 'started'; },
+      stop() { this.state = 'stopped'; },
+      frequency: { value: 0 },
+    };
+    return app;
+  }
+
+  it('pouce levé lance le motif, pouce baissé l\'arrête', () => {
+    const app = djApp();
+    dj.frame(app, frame([{ type: 'pose_enter', label: 'like', hand: 'right' }]));
+    expect(dj.clock.state).toBe('started');
+    dj.frame(app, frame([{ type: 'pose_enter', label: 'dislike', hand: 'right' }]));
+    expect(dj.clock.state).toBe('stopped');
+  });
+
+  it('un balayage de la main droite change de motif', () => {
+    const app = djApp();
+    dj.frame(app, frame([{ type: 'swipe_right', hand: 'right' }]));
+    expect(dj.pattern).toBe(1);
+    expect(app.calls).toContainEqual(['hud', 'chord', PATTERNS[1].name]);
+  });
+});
+
+describe('mode Mes gestes (appris)', () => {
+  it('un geste appris stable joue le degré correspondant', () => {
+    const app = fakeApp(custom);
+    app.knn = {
+      samples: [1],
+      labels: ['rien', 'griffe', 'poing_leve'],
+      predict: () => ({ label: 'griffe', confidence: 0.9 }),
+    };
+    custom.enter(app);
+    for (let i = 0; i < 5; i++) {
+      custom.frame(app, frame([], { right: hand() }, i * 33));
+    }
+    const expected = degreeToMidi(app.settings.root, app.settings.scale, 0); // « griffe » : 1er geste hors « rien »
+    expect(app.calls).toContainEqual(['noteOn', expected]);
+  });
+
+  it('sans geste appris (confiance nulle), rien ne joue', () => {
+    const app = fakeApp(custom);
+    app.knn = { samples: [], labels: [], predict: () => null };
+    custom.enter(app);
+    for (let i = 0; i < 5; i++) {
+      custom.frame(app, frame([], { right: hand() }, i * 33));
+    }
+    expect(app.calls.filter((c) => c[0] === 'noteOn')).toEqual([]);
   });
 });
