@@ -6,12 +6,30 @@
     <title>Geste Musique · Studio</title>
     <meta name="description" content="Jouer de la musique avec les mains devant une webcam." />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <header class="topbar">
+    <section id="intro" class="intro">
+      <div class="intro-frame">
+        <p class="kicker">studio · 8 modes</p>
+        <h1>🖐 Studio</h1>
+        <p class="lead">Notes, batterie, thérémine, piano, guitare, DJ et vos propres gestes : huit façons de jouer de la musique avec vos mains.</p>
+        <ul class="tips">
+          <li>Placez-vous à <b>50–80 cm</b> de la caméra</li>
+          <li>Installez-vous avec un <b>bon éclairage de face</b></li>
+          <li><b>Autorisez la caméra</b> quand le navigateur le demande</li>
+        </ul>
+        <button id="start" class="primary start">▶ Démarrer</button>
+        <p id="intro-error" class="error" role="alert"></p>
+        <p class="foot"><a href="./" class="link">← Geste Live</a> · navigateur · rien à installer · rien n'est envoyé</p>
+      </div>
+    </section>
+
+    <header id="topbar" class="topbar" hidden>
       <h1>🖐 Geste Musique · Studio</h1> <a href="./" class="button">← Geste Live</a>
-      <button id="start" class="primary">▶ Démarrer (caméra + son)</button>
       <label>Mode <select id="mode"></select></label>
       <label>Instrument <select id="instrument"></select></label>
       <label>Tonique <select id="root"></select></label>
@@ -24,7 +42,7 @@
       <span id="lock" class="badge" hidden>🔒 verrouillé</span>
     </header>
 
-    <div class="layout">
+    <div id="layout" class="layout" hidden>
       <main class="stage" id="stage">
         <video id="video" playsinline muted></video>
         <canvas id="overlay"></canvas>
@@ -35,10 +53,6 @@
           <div><span class="hud-label">Boucles</span><strong id="hud-loop">vide</strong></div>
         </div>
         <div id="toasts" class="toasts" aria-live="polite"></div>
-        <div id="splash" class="splash">
-          <p>Placez-vous à 50–80 cm de la caméra, bien éclairé de face, mains entièrement visibles.</p>
-          <p>Cliquez sur <strong>Démarrer</strong> pour autoriser la caméra et le son.</p>
-        </div>
       </main>
 
       <aside class="panel">
@@ -65,12 +79,17 @@
         </section>
 
         <section data-panel="learn" class="tab-panel">
-          <p class="hint">Apprenez vos propres gestes : tenez la pose devant la caméra (main droite de préférence) pendant l'enregistrement. 30 à 50 exemples par geste suffisent. Ajoutez un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisissez le mode <em>Mes gestes</em>.</p>
+          <ol class="learn-steps">
+            <li>1. donnez un nom à votre geste</li>
+            <li>2. montrez-le devant la caméra (main droite de préférence) pendant l'enregistrement</li>
+            <li>3. recommencez pour chaque geste, 30 à 50 fois idéalement</li>
+          </ol>
+          <p class="hint">Ajoutez aussi un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisissez le mode <em>Mes gestes</em>.</p>
           <div class="row">
             <input id="learn-name" placeholder="Nom du geste (ex. griffe)" />
             <button id="learn-record">⏺ Enregistrer 2 s</button>
           </div>
-          <p>Prédiction : <strong id="learn-pred">—</strong></p>
+          <p>Geste reconnu : <strong id="learn-pred">—</strong></p>
           <ul id="learn-list" class="list"></ul>
           <div class="row">
             <button id="learn-export">Exporter</button>
@@ -80,7 +99,7 @@
         </section>
 
         <section data-panel="data" class="tab-panel">
-          <p class="hint">Collectez un jeu de données pour entraîner les modèles TensorFlow (voir <code>training/README.md</code>). Enregistrez plusieurs personnes, éclairages et distances.</p>
+          <p class="hint">Enregistre tes gestes pour améliorer la reconnaissance. Varie les personnes, les éclairages et les distances si tu peux.</p>
           <div class="row">
             <label>Joueur <input id="data-subject" value="joueur1" /></label>
           </div>
@@ -120,14 +139,27 @@
           <div id="thresholds" class="sliders"></div>
           <h3>MIDI</h3>
           <label>Sortie <select id="midi-out"><option value="">(aucune)</option></select></label>
-          <h3>Modèles</h3>
-          <pre id="model-status" class="stats">Pas encore chargés.</pre>
-          <h3>Performances</h3>
-          <pre id="perf" class="stats">—</pre>
+          <h3>Reconnaissance</h3>
+          <p id="model-summary" class="status">Pas encore activée.</p>
           <h3>Raccourcis clavier</h3>
           <p class="hint"><kbd>1</kbd>–<kbd>8</kbd> mode · <kbd>Espace</kbd> silence · <kbd>V</kbd> verrou · <kbd>B</kbd> boucle</p>
+          <details class="advanced">
+            <summary>Infos avancées</summary>
+            <pre id="model-status" class="stats">Pas encore chargés.</pre>
+            <pre id="perf" class="stats">—</pre>
+          </details>
         </section>
       </aside>
+    </div>
+
+    <div id="confirm-overlay" class="modal-overlay" hidden>
+      <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-message">
+        <p id="confirm-message"></p>
+        <div class="row modal-actions">
+          <button id="confirm-cancel">Annuler</button>
+          <button id="confirm-ok" class="danger">Confirmer</button>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="/src/main.js"></script>

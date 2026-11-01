@@ -71,7 +71,7 @@ class GesteLive {
     this.chordPauseUntil = 0; // pas d'accord juste après avoir validé la roue (main ouverte = V)
     this.learnSamples = []; // {label, x} enregistrés pour l'entraînement TensorFlow
     this.learning = null; // {label, until}
-    this.modelSource = 'règles géométriques';
+    this.modelSource = 'standard';
     this.loadingInstrument = null;
     // Compteurs utilisés par le tutoriel pour savoir si un geste a été réussi.
     this.stats = {
@@ -264,7 +264,11 @@ class GesteLive {
       this.started = true;
       $('intro').hidden = true;
       $('rail').hidden = false;
-      this.plate.say(`instrument : ${instrumentInfo(this.audio.instrument).name} · montrez vos mains`);
+      if (this.audio.instrument !== this.s.instrument) {
+        this.plate.say(`${instrumentInfo(this.s.instrument).name} indisponible (connexion ?) · synthé à la place`);
+      } else {
+        this.plate.say(`instrument : ${instrumentInfo(this.audio.instrument).name} · montrez vos mains`);
+      }
       this.loopDetect();
     } catch (err) {
       console.error(err);
@@ -311,18 +315,18 @@ class GesteLive {
     if (hasSavedModel()) {
       const { BrowserPoseModel } = await import('../ml/trainer.js');
       const own = await BrowserPoseModel.load();
-      if (own) return this.useModel(own, 'TensorFlow.js · vos gestes');
+      if (own) return this.useModel(own, 'gestes personnalisés');
     }
     try {
-      if (!(await hasPythonModel())) return this.useModel(null, 'règles géométriques');
+      if (!(await hasPythonModel())) return this.useModel(null, 'standard');
       const [{ PoseModel }, { useCpu }] = await Promise.all([import('../ml/models.js'), import('../ml/trainer.js')]);
       await useCpu();
       const python = await PoseModel.load();
-      if (python) return this.useModel(python, 'TensorFlow.js · modèle Python');
+      if (python) return this.useModel(python, 'avancée');
     } catch (err) {
       console.warn('modèle de poses illisible', err);
     }
-    this.useModel(null, 'règles géométriques');
+    this.useModel(null, 'standard');
   }
 
   useModel(model, source) {
@@ -348,7 +352,7 @@ class GesteLive {
       const { BrowserPoseModel } = await import('../ml/trainer.js');
       await BrowserPoseModel.remove();
       await this.loadPoseModel();
-      $('learn-status').textContent = 'modèle personnel effacé';
+      $('learn-status').textContent = 'gestes personnalisés effacés';
     });
   }
 
@@ -392,25 +396,25 @@ class GesteLive {
     const bar = $('learn-progress');
     const n = new Set(this.learnSamples.map((s) => s.label)).size;
     if (n < 2) {
-      status.textContent = 'enregistrez au moins deux poses (idéalement toutes)';
+      status.textContent = 'montre au moins deux gestes différents (idéalement tous)';
       return;
     }
     bar.hidden = false;
-    status.textContent = 'entraînement…';
+    status.textContent = 'je m\'adapte à tes gestes…';
     try {
       const { BrowserPoseModel } = await import('../ml/trainer.js');
       const model = await BrowserPoseModel.train(this.learnSamples, {
-        onProgress: (epoch, epochs, acc) => {
+        onProgress: (epoch, epochs) => {
           bar.value = epoch / epochs;
-          status.textContent = `entraînement… ${epoch}/${epochs} · précision ${(acc * 100).toFixed(0)} %`;
+          status.textContent = `je m'adapte à tes gestes… ${Math.round((epoch / epochs) * 100)} %`;
         },
       });
       await model.save().catch(() => {}); // sans IndexedDB : modèle gardé pour cette session
-      this.useModel(model, 'TensorFlow.js · vos gestes');
-      status.textContent = `modèle prêt · précision ${(model.accuracy * 100).toFixed(0)} % · ${this.learnSamples.length} exemples`;
-      this.plate.say('reconnaissance : TensorFlow');
-    } catch (err) {
-      status.textContent = `échec : ${err?.message ?? err}`;
+      this.useModel(model, 'gestes personnalisés');
+      status.textContent = 'c\'est prêt ! tes gestes sont maintenant reconnus.';
+      this.plate.say('mes gestes activés');
+    } catch {
+      status.textContent = 'ça n\'a pas marché, réessaie.';
     } finally {
       bar.hidden = true;
     }

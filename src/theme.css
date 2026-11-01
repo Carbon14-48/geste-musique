@@ -1,0 +1,16 @@
+/* Palette et typographie partagées entre Geste Live et le Studio. */
+
+:root {
+  --bg: #06070a;
+  --ink: #ece9e2;
+  --dim: rgba(236, 233, 226, 0.55);
+  --faint: rgba(236, 233, 226, 0.16);
+  --accent: #f4c26b;
+  --accent-text: #1b1300;
+  --danger: #ff5d5d;
+  --left: #4fc3f7;
+  --right: #ff8a65;
+  --sans: Geist, 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}

@@ -36,7 +36,7 @@
       <button id="btn-rec">● enregistrer</button>
       <select id="rec-format" aria-label="Format de la prise"></select>
       <button id="btn-settings">réglages</button>
-      <button id="btn-learn">apprendre (TensorFlow)</button>
+      <button id="btn-learn">apprendre mes gestes</button>
       <button id="btn-tutor">comment jouer</button>
       <button id="btn-help">aide</button>
     </nav>
@@ -75,20 +75,27 @@
       <p><kbd>1</kbd>–<kbd>5</kbd> mode · <kbd>0</kbd> aucun · <kbd>←</kbd> <kbd>→</kbd> instrument · <kbd>R</kbd> enregistrer · <kbd>espace</kbd> silence · <kbd>H</kbd> tutoriel</p>
       <p><a class="link" href="studio.html">ouvrir le studio →</a></p>
       <p class="credit"><span id="credit"></span> · <a class="link" href="https://github.com/nbrosowsky/tonejs-instruments" target="_blank" rel="noopener">source</a></p>
+      <details class="advanced">
+        <summary>infos avancées</summary>
+        <p class="small">reconnaissance : <span id="learn-source">standard</span></p>
+      </details>
     </aside>
 
     <aside id="panel-learn" class="panel" hidden>
       <header><h2>apprendre mes gestes</h2><button data-close aria-label="Fermer">×</button></header>
-      <p>Un petit réseau <b>TensorFlow.js</b> s'entraîne ici, dans le navigateur, sur <b>vos</b> mains. Rien n'est envoyé.</p>
-      <p class="small">Pour chaque pose : cliquez, puis faites la pose avec la <b>main gauche</b> pendant 3 secondes en la bougeant un peu (hauteur, rotation, paume / dos).</p>
+      <p class="small">Montre-moi tes gestes : je m'adapte à tes mains. Rien ne quitte ton ordinateur.</p>
+      <ol class="learn-steps">
+        <li>1. choisis un geste ci-dessous</li>
+        <li>2. montre-le avec la <b>main gauche</b> pendant 3 secondes, en le bougeant un peu</li>
+        <li>3. je m'adapte</li>
+      </ol>
       <div id="learn-poses" class="learn-poses"></div>
       <div class="learn-actions">
-        <button id="learn-train">entraîner</button>
+        <button id="learn-train">je m'adapte</button>
         <button id="learn-reset">effacer</button>
       </div>
       <progress id="learn-progress" max="1" value="0" hidden></progress>
       <p id="learn-status" class="small"></p>
-      <p class="small">Modèle utilisé : <b id="learn-source">règles géométriques</b>. Le modèle Python (dossier <code>training/</code>, jeu HaGRID) est chargé automatiquement s'il est dans <code>public/models/pose/</code> ; votre modèle personnel passe devant.</p>
     </aside>
 
     <aside id="panel-help" class="panel" hidden>

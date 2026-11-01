@@ -111,6 +111,27 @@ class App {
     this.log(message);
   }
 
+  /** Boîte de dialogue stylée à la place de confirm(). */
+  confirmDialog(message) {
+    return new Promise((resolve) => {
+      $('confirm-message').textContent = message;
+      $('confirm-overlay').hidden = false;
+      const done = (ok) => {
+        $('confirm-overlay').hidden = true;
+        ok_btn.removeEventListener('click', onOk);
+        cancel_btn.removeEventListener('click', onCancel);
+        resolve(ok);
+      };
+      const ok_btn = $('confirm-ok');
+      const cancel_btn = $('confirm-cancel');
+      const onOk = () => done(true);
+      const onCancel = () => done(false);
+      ok_btn.addEventListener('click', onOk);
+      cancel_btn.addEventListener('click', onCancel);
+      ok_btn.focus();
+    });
+  }
+
   log(message) {
     const li = document.createElement('li');
     li.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
@@ -240,8 +261,8 @@ class App {
       this.knn.save();
       this.renderKnn();
     });
-    $('learn-clear').addEventListener('click', () => {
-      if (!confirm('Effacer tous les gestes appris ?')) return;
+    $('learn-clear').addEventListener('click', async () => {
+      if (!(await this.confirmDialog('Effacer tous les gestes appris ?'))) return;
       this.knn.clear();
       this.knn.save();
       this.renderKnn();
@@ -259,13 +280,13 @@ class App {
       if (!file) return;
       try {
         this.dataset.load(JSON.parse(await file.text()));
-      } catch (err) {
-        alert(err.message);
+      } catch {
+        this.notify('Fichier illisible : vérifiez qu\'il vient bien d\'un export du Studio.');
       }
       this.renderDataStats();
     });
-    $('data-clear').addEventListener('click', () => {
-      if (!confirm('Vider le jeu de données en mémoire ?')) return;
+    $('data-clear').addEventListener('click', async () => {
+      if (!(await this.confirmDialog('Vider le jeu de données en mémoire ?'))) return;
       this.dataset.clear();
       this.renderDataStats();
     });
@@ -366,6 +387,7 @@ class App {
     const btn = $('start');
     btn.disabled = true;
     btn.textContent = 'Chargement…';
+    $('intro-error').textContent = '';
     try {
       await this.engine.start();
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -377,7 +399,6 @@ class App {
       await video.play();
       $('stage').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
       const info = await this.detector.init({ numHands: 2 });
-      $('splash').hidden = true;
 
       const status = [`Détecteur : MediaPipe Hand Landmarker (${info.delegate})`, `Modèle : ${info.model}`];
       try {
@@ -393,6 +414,7 @@ class App {
         status.push(`Mouvements : erreur de chargement (${err.message})`);
       }
       $('model-status').textContent = status.join('\n');
+      $('model-summary').textContent = `Reconnaissance : ${this.tracker.poseModel || this.dynamicModel ? 'avancée' : 'standard'}`;
 
       // MIDI en arrière-plan : certains navigateurs demandent une permission qui peut rester en attente.
       if (!this.midi.supported) $('midi-out').disabled = true;
@@ -404,6 +426,9 @@ class App {
 
       this.running = true;
       this.mode.enter?.(this);
+      $('intro').hidden = true;
+      $('topbar').hidden = false;
+      $('layout').hidden = false;
       btn.textContent = '● En cours';
       this.notify('Prêt ! Montrez vos mains.');
       this.loop();
@@ -411,7 +436,10 @@ class App {
       console.error(err);
       btn.disabled = false;
       btn.textContent = '▶ Réessayer';
-      alert(`Impossible de démarrer : ${err.message}`);
+      $('intro-error').textContent =
+        err?.name === 'NotAllowedError'
+          ? 'La caméra est bloquée : autorisez-la avec l\'icône de caméra dans la barre d\'adresse, puis réessayez.'
+          : `Impossible de démarrer : ${err?.message ?? err}`;
     }
   }
 
@@ -477,7 +505,7 @@ class App {
         el.textContent = '—';
         continue;
       }
-      const model = h.modelLabel ? ` · modèle ${h.modelLabel.label} ${Math.round(h.modelLabel.confidence * 100)} %` : '';
+      const model = h.modelLabel ? ` · ${h.modelLabel.label} ${Math.round(h.modelLabel.confidence * 100)} %` : '';
       el.textContent = `${POSE_NAMES[h.label] ?? h.label} · ${h.count ?? '?'} doigt(s)\nhaut ${Math.round(this.normHeight(h.height) * 100)} % · pince ${h.pinch.toFixed(2)}${model}`;
       el.style.whiteSpace = 'pre-line';
     }
@@ -500,7 +528,7 @@ class App {
   /** Compte à rebours puis appelle onFrame pendant `ms`. */
   async runCapture(statusEl, label, ms, onFrame) {
     if (!this.running) {
-      alert('Cliquez d\'abord sur Démarrer.');
+      this.notify('Cliquez d\'abord sur Démarrer.');
       return false;
     }
     if (this.capture) return false;
@@ -570,7 +598,7 @@ class App {
   async learnRecord() {
     const name = $('learn-name').value.trim();
     if (!name) {
-      alert('Donnez un nom au geste.');
+      this.notify('Donnez un nom au geste.');
       return;
     }
     let n = 0;
@@ -623,7 +651,7 @@ class App {
 
   async toggleAudioRecording() {
     const btn = $('rec-audio');
-    if (!this.engine.ready) return alert('Cliquez d\'abord sur Démarrer.');
+    if (!this.engine.ready) return this.notify('Cliquez d\'abord sur Démarrer.');
     if (!this.engine.recording) {
       this.engine.startRecording();
       btn.classList.add('recording');
@@ -638,7 +666,7 @@ class App {
 
   toggleMidiRecording() {
     const btn = $('rec-midi');
-    if (!this.engine.ready) return alert('Cliquez d\'abord sur Démarrer.');
+    if (!this.engine.ready) return this.notify('Cliquez d\'abord sur Démarrer.');
     if (!this.midiCapture.active) {
       this.midiCapture.begin(this.engine.now());
       btn.classList.add('recording');
