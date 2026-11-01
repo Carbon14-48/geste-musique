@@ -44,7 +44,7 @@ export class Overlay {
       ctx.fillStyle = P.INK;
       ctx.font = `700 26px ${P.SANS}`;
       ctx.textAlign = 'center';
-      ctx.fillText('🔒 verrouillé — tiens OK pour reprendre', w / 2, h / 2);
+      ctx.fillText('verrouillé — tiens OK pour reprendre', w / 2, h / 2);
       ctx.textAlign = 'start';
     }
   }

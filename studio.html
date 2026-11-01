@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Geste Musique · Studio</title>
     <meta name="description" content="Jouer de la musique avec les mains devant une webcam." />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐</text></svg>" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='14' y='14' width='72' height='72' rx='20' fill='none' stroke='%23ece9e2' stroke-width='6'/><rect x='38' y='38' width='24' height='24' rx='6' fill='%23ece9e2'/></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -14,31 +14,31 @@
   <body>
     <section id="intro" class="intro">
       <div class="intro-frame">
-        <h1>🖐 Studio</h1>
+        <h1>Studio</h1>
         <p class="lead">Notes, batterie, thérémine, piano, guitare, DJ et tes propres gestes : huit façons de jouer de la musique avec tes mains.</p>
-        <button id="start" class="primary start">🎵 Jouer</button>
+        <button id="start" class="primary start">Jouer</button>
         <p id="intro-error" class="error" role="alert"></p>
         <ul class="tips">
-          <li><span class="tip-icon" aria-hidden="true">📏</span> Place-toi à <b>50–80 cm</b> de la caméra</li>
-          <li><span class="tip-icon" aria-hidden="true">💡</span> Installe-toi avec un <b>bon éclairage de face</b></li>
-          <li><span class="tip-icon" aria-hidden="true">📷</span> <b>Autorise la caméra</b> quand le navigateur le demande</li>
+          <li>Place-toi à <b>50–80 cm</b> de la caméra</li>
+          <li>Installe-toi avec un <b>bon éclairage de face</b></li>
+          <li><b>Autorise la caméra</b> quand le navigateur le demande</li>
         </ul>
-        <p class="foot"><a href="./" class="link">← Geste Live</a> · navigateur · rien à installer · rien n'est envoyé</p>
+        <p class="foot"><a href="./" class="link">← Geste Live</a></p>
       </div>
     </section>
 
     <header id="topbar" class="topbar" hidden>
-      <h1>🖐 Geste Musique · Studio</h1> <a href="./" class="button">← Geste Live</a>
+      <h1>Geste Musique · Studio</h1> <a href="./" class="button">← Geste Live</a>
       <label>Mode <select id="mode"></select></label>
       <label>Instrument <select id="instrument"></select></label>
       <label>Tonique <select id="root"></select></label>
       <label>Gamme <select id="scale"></select></label>
       <label class="check"><input type="checkbox" id="snap" checked /> Aimanter</label>
       <span class="spacer"></span>
-      <button id="rec-audio" title="Enregistrer le son (WebM)">⏺ Audio</button>
-      <button id="rec-midi" title="Enregistrer les notes (.mid)">⏺ MIDI</button>
-      <button id="loop-clear" title="Effacer les boucles">🔁 Effacer</button>
-      <span id="lock" class="badge" hidden>🔒 verrouillé</span>
+      <button id="rec-audio" title="Enregistrer le son (WebM)">● Audio</button>
+      <button id="rec-midi" title="Enregistrer les notes (.mid)">● MIDI</button>
+      <button id="loop-clear" title="Effacer les boucles">Effacer</button>
+      <span id="lock" class="badge" hidden>verrouillé</span>
     </header>
 
     <div id="layout" class="layout" hidden>
@@ -86,7 +86,7 @@
           <p class="hint">Ajoute aussi un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisis le mode <em>Mes gestes</em>.</p>
           <div class="row">
             <input id="learn-name" placeholder="Nom du geste (ex. griffe)" />
-            <button id="learn-record">⏺ Enregistrer 2 s</button>
+            <button id="learn-record">● Enregistrer 2 s</button>
           </div>
           <p>Geste reconnu : <strong id="learn-pred">—</strong></p>
           <ul id="learn-list" class="list"></ul>
@@ -104,11 +104,11 @@
           </div>
           <div class="row">
             <label>Pose <select id="data-pose-label"></select></label>
-            <button id="data-pose-record">⏺ Poses (3 s)</button>
+            <button id="data-pose-record">● Poses (3 s)</button>
           </div>
           <div class="row">
             <label>Mouvement <select id="data-seq-label"></select></label>
-            <button id="data-seq-record">⏺ Séquence (1,5 s)</button>
+            <button id="data-seq-record">● Séquence (1,5 s)</button>
           </div>
           <p id="data-status" class="status"></p>
           <pre id="data-stats" class="stats"></pre>

@@ -234,7 +234,7 @@ class App {
     $('rec-midi').addEventListener('click', () => this.toggleMidiRecording());
     $('loop-clear').addEventListener('click', () => {
       this.looper.clear();
-      this.notify('🔁 Boucles effacées');
+      this.notify('Boucles effacées');
     });
     $('midi-out').addEventListener('change', (e) => this.midi.select(e.target.value));
 
@@ -300,10 +300,10 @@ class App {
         this.looper.stop();
       } else if (e.key === 'v' || e.key === 'V') {
         this.locked = !this.locked;
-        this.notify(this.locked ? '🔒 Jeu verrouillé' : '🔓 Jeu déverrouillé');
+        this.notify(this.locked ? 'Jeu verrouillé' : 'Jeu déverrouillé');
       } else if (e.key === 'b' || e.key === 'B') {
         this.looper.toggleRecord();
-        this.notify(`🔁 Boucle : ${this.looper.status()}`);
+        this.notify(`Boucle : ${this.looper.status()}`);
       }
     });
   }
@@ -347,7 +347,7 @@ class App {
       li.innerHTML = `<span><strong></strong> — ${n} exemples</span>`;
       li.querySelector('strong').textContent = label;
       const del = document.createElement('button');
-      del.textContent = '✕';
+      del.textContent = '×';
       del.className = 'danger';
       del.addEventListener('click', () => {
         this.knn.removeLabel(label);
@@ -612,7 +612,7 @@ class App {
     if (!ok) return;
     this.knn.save();
     this.renderKnn();
-    this.notify(`🧠 ${n} exemples ajoutés pour « ${name} »`);
+    this.notify(`${n} exemples ajoutés pour « ${name} »`);
   }
 
   async dataRecordPoses() {
@@ -655,11 +655,11 @@ class App {
     if (!this.engine.recording) {
       this.engine.startRecording();
       btn.classList.add('recording');
-      btn.textContent = '⏹ Audio';
+      btn.textContent = '■ Audio';
     } else {
       const blob = await this.engine.stopRecording();
       btn.classList.remove('recording');
-      btn.textContent = '⏺ Audio';
+      btn.textContent = '● Audio';
       if (blob) download(blob, `geste-musique-${stamp()}.webm`);
     }
   }
@@ -670,11 +670,11 @@ class App {
     if (!this.midiCapture.active) {
       this.midiCapture.begin(this.engine.now());
       btn.classList.add('recording');
-      btn.textContent = '⏹ MIDI';
+      btn.textContent = '■ MIDI';
     } else {
       const events = this.midiCapture.end();
       btn.classList.remove('recording');
-      btn.textContent = '⏺ MIDI';
+      btn.textContent = '● MIDI';
       if (events.length) download(this.midiCapture.toFile(events, 120), `geste-musique-${stamp()}.mid`, 'audio/midi');
       else this.notify('Aucune note enregistrée.');
     }

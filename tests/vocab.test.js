@@ -33,3 +33,20 @@ describe('vocabulaire des pages', () => {
     });
   }
 });
+
+// Pas d'émojis décoratifs : seuls ● (enregistrer), ■ (arrêter), ← → (flèches) et × (fermer) sont gardés.
+const EMOJI = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE0F}]/u;
+
+describe('écran d\'accueil : pas d\'émoji, pas de phrase marketing', () => {
+  for (const page of ['index.html', 'studio.html']) {
+    it(`${page} ne contient aucun émoji décoratif`, () => {
+      const html = readFileSync(new URL(page, `file://${root}`), 'utf8');
+      expect(html).not.toMatch(EMOJI);
+    });
+
+    it(`${page} ne contient pas la phrase « rien n'est envoyé »`, () => {
+      const html = readFileSync(new URL(page, `file://${root}`), 'utf8');
+      expect(html).not.toMatch(/rien n'est envoyé/i);
+    });
+  }
+});

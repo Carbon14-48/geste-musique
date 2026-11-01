@@ -156,7 +156,7 @@ export class Tutorial {
     this.els.step.textContent = `${this.index + 1} / ${LESSONS.length}`;
     this.els.title.textContent = lesson.title;
     this.els.text.textContent = lesson.text;
-    this.els.status.textContent = this.done.has(this.index) ? '✓ déjà réussi · essaie encore' : 'à toi : essaie devant la caméra';
+    this.els.status.textContent = this.done.has(this.index) ? 'déjà réussi · essaie encore' : 'à toi : essaie devant la caméra';
     this.els.status.className = 'tutor-status';
     this.els.prev.disabled = this.index === 0;
     this.els.next.textContent = this.index === LESSONS.length - 1 ? 'terminé' : 'suivant →';
@@ -169,7 +169,7 @@ export class Tutorial {
     if (this.successAt === null && this.app.started && lesson.check(this.app.stats, this.base)) {
       this.successAt = now;
       this.done.add(this.index);
-      this.els.status.textContent = '✓ réussi !';
+      this.els.status.textContent = 'réussi !';
       this.els.status.className = 'tutor-status ok';
     }
     if (this.successAt !== null && now - this.successAt > 1600 && this.index < LESSONS.length - 1) this.go(this.index + 1);
