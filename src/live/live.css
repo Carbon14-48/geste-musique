@@ -270,6 +270,20 @@ a.link {
   font-size: 15px;
 }
 
+/* Une case à cocher ne doit jamais se retrouver seule sur sa ligne, séparée de son texte. */
+.panel label.check {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.panel label.check input {
+  flex-shrink: 0;
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
 .panel select,
 .panel input[type='range'] {
   background: rgba(255, 255, 255, 0.07);
