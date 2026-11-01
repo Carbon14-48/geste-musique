@@ -281,7 +281,7 @@ class App {
       try {
         this.dataset.load(JSON.parse(await file.text()));
       } catch {
-        this.notify('Fichier illisible : vérifiez qu\'il vient bien d\'un export du Studio.');
+        this.notify('Fichier illisible : vérifie qu\'il vient bien d\'un export du Studio.');
       }
       this.renderDataStats();
     });
@@ -430,7 +430,7 @@ class App {
       $('topbar').hidden = false;
       $('layout').hidden = false;
       btn.textContent = '● En cours';
-      this.notify('Prêt ! Montrez vos mains.');
+      this.notify('Prêt ! Montre tes mains.');
       this.loop();
     } catch (err) {
       console.error(err);
@@ -438,7 +438,7 @@ class App {
       btn.textContent = '▶ Réessayer';
       $('intro-error').textContent =
         err?.name === 'NotAllowedError'
-          ? 'La caméra est bloquée : autorisez-la avec l\'icône de caméra dans la barre d\'adresse, puis réessayez.'
+          ? 'La caméra est bloquée : autorise-la avec l\'icône de caméra dans la barre d\'adresse, puis réessaie.'
           : `Impossible de démarrer : ${err?.message ?? err}`;
     }
   }
@@ -528,7 +528,7 @@ class App {
   /** Compte à rebours puis appelle onFrame pendant `ms`. */
   async runCapture(statusEl, label, ms, onFrame) {
     if (!this.running) {
-      this.notify('Cliquez d\'abord sur Démarrer.');
+      this.notify('Clique d\'abord sur Jouer.');
       return false;
     }
     if (this.capture) return false;
@@ -573,7 +573,7 @@ class App {
     });
     if (!ok) return;
     if (samples.length < 5) {
-      $('cal-status').textContent = 'Main non détectée, recommencez.';
+      $('cal-status').textContent = 'Main non détectée, recommence.';
       return;
     }
     const c = this.calibration;
@@ -598,7 +598,7 @@ class App {
   async learnRecord() {
     const name = $('learn-name').value.trim();
     if (!name) {
-      this.notify('Donnez un nom au geste.');
+      this.notify('Donne un nom au geste.');
       return;
     }
     let n = 0;
@@ -639,7 +639,7 @@ class App {
     if (!ok) return;
     const frames = [...this.tracker.window(role)];
     if (frames.filter((f) => f.hand).length < 10) {
-      $('data-status').textContent = 'Main trop peu visible, recommencez.';
+      $('data-status').textContent = 'Main trop peu visible, recommence.';
       return;
     }
     this.dataset.addSequence(label, frames);
@@ -651,7 +651,7 @@ class App {
 
   async toggleAudioRecording() {
     const btn = $('rec-audio');
-    if (!this.engine.ready) return this.notify('Cliquez d\'abord sur Démarrer.');
+    if (!this.engine.ready) return this.notify('Clique d\'abord sur Jouer.');
     if (!this.engine.recording) {
       this.engine.startRecording();
       btn.classList.add('recording');
@@ -666,7 +666,7 @@ class App {
 
   toggleMidiRecording() {
     const btn = $('rec-midi');
-    if (!this.engine.ready) return this.notify('Cliquez d\'abord sur Démarrer.');
+    if (!this.engine.ready) return this.notify('Clique d\'abord sur Jouer.');
     if (!this.midiCapture.active) {
       this.midiCapture.begin(this.engine.now());
       btn.classList.add('recording');

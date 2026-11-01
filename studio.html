@@ -8,22 +8,21 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖐</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <section id="intro" class="intro">
       <div class="intro-frame">
-        <p class="kicker">studio · 8 modes</p>
         <h1>🖐 Studio</h1>
-        <p class="lead">Notes, batterie, thérémine, piano, guitare, DJ et vos propres gestes : huit façons de jouer de la musique avec vos mains.</p>
-        <ul class="tips">
-          <li>Placez-vous à <b>50–80 cm</b> de la caméra</li>
-          <li>Installez-vous avec un <b>bon éclairage de face</b></li>
-          <li><b>Autorisez la caméra</b> quand le navigateur le demande</li>
-        </ul>
-        <button id="start" class="primary start">▶ Démarrer</button>
+        <p class="lead">Notes, batterie, thérémine, piano, guitare, DJ et tes propres gestes : huit façons de jouer de la musique avec tes mains.</p>
+        <button id="start" class="primary start">🎵 Jouer</button>
         <p id="intro-error" class="error" role="alert"></p>
+        <ul class="tips">
+          <li><span class="tip-icon" aria-hidden="true">📏</span> Place-toi à <b>50–80 cm</b> de la caméra</li>
+          <li><span class="tip-icon" aria-hidden="true">💡</span> Installe-toi avec un <b>bon éclairage de face</b></li>
+          <li><span class="tip-icon" aria-hidden="true">📷</span> <b>Autorise la caméra</b> quand le navigateur le demande</li>
+        </ul>
         <p class="foot"><a href="./" class="link">← Geste Live</a> · navigateur · rien à installer · rien n'est envoyé</p>
       </div>
     </section>
@@ -80,11 +79,11 @@
 
         <section data-panel="learn" class="tab-panel">
           <ol class="learn-steps">
-            <li>1. donnez un nom à votre geste</li>
-            <li>2. montrez-le devant la caméra (main droite de préférence) pendant l'enregistrement</li>
-            <li>3. recommencez pour chaque geste, 30 à 50 fois idéalement</li>
+            <li>1. donne un nom à ton geste</li>
+            <li>2. montre-le devant la caméra (main droite de préférence) pendant l'enregistrement</li>
+            <li>3. recommence pour chaque geste, 30 à 50 fois idéalement</li>
           </ol>
-          <p class="hint">Ajoutez aussi un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisissez le mode <em>Mes gestes</em>.</p>
+          <p class="hint">Ajoute aussi un geste « rien » (main au repos) pour éviter les faux déclenchements. Ensuite, choisis le mode <em>Mes gestes</em>.</p>
           <div class="row">
             <input id="learn-name" placeholder="Nom du geste (ex. griffe)" />
             <button id="learn-record">⏺ Enregistrer 2 s</button>
@@ -126,7 +125,7 @@
           <label class="check"><input type="checkbox" id="swap" /> Inverser main gauche / droite</label>
           <label class="check"><input type="checkbox" id="skeleton" checked /> Afficher le squelette</label>
           <h3>Calibration</h3>
-          <p class="hint">Adapte les seuils à votre main et à votre espace de jeu.</p>
+          <p class="hint">Adapte les seuils à ta main et à ton espace de jeu.</p>
           <div class="row wrap">
             <button id="cal-open">1. Main ouverte</button>
             <button id="cal-fist">2. Poing</button>
