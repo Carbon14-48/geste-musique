@@ -30,7 +30,6 @@ const DEFAULTS = {
   mirror: true,
   swap: false,
   invertPalm: false,
-  simpleArc: false,
   scrim: 0.25,
   enhance: true,
   format: 'wide',
@@ -110,7 +109,6 @@ class GesteLive {
     this.tracker.swapHands = this.s.swap;
     this.tracker.invertPalm = this.s.invertPalm;
     this.chordHand.snap = this.s.snap;
-    this.arc.requireBack = !this.s.simpleArc;
     this.modes.melody.key = this.key;
     this.audio.setBpm(this.s.bpm);
     this.audio.setBank(this.s.bank);
@@ -141,7 +139,7 @@ class GesteLive {
     $('set-bpm').value = this.s.bpm;
     $('bpm-out').textContent = this.s.bpm;
     $('set-scrim').value = this.s.scrim;
-    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc', 'enhance']) $(`set-${k}`).checked = this.s[k];
+    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'enhance']) $(`set-${k}`).checked = this.s[k];
 
     const bind = (id, key, parse = (v) => v) => {
       $(id).addEventListener('input', (e) => {
@@ -158,7 +156,7 @@ class GesteLive {
     bind('set-bank', 'bank');
     bind('set-scrim', 'scrim', Number);
     bind('rec-format', 'format');
-    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'simpleArc', 'enhance']) bind(`set-${k}`, k);
+    for (const k of ['snap', 'mirror', 'swap', 'invertPalm', 'enhance']) bind(`set-${k}`, k);
 
     $('start').addEventListener('click', () => this.start());
     $('btn-rec').addEventListener('click', () => this.toggleRecord());

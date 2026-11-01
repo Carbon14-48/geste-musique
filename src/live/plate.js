@@ -297,9 +297,9 @@ export class Plate {
     const st = S.modeState;
     let y = b.y + 24;
     if (!mode || !st) {
-      label(ctx, 'poing, dos de la main vers la caméra', b.x, y + 10, { size: 13, color: P.INK });
-      label(ctx, '→ l\'arc des modes apparaît', b.x, y + 32, { size: 13 });
-      label(ctx, 'glisse · ouvre la main pour choisir', b.x, y + 54, { size: 13 });
+      label(ctx, 'fais un poing (main droite)', b.x, y + 10, { size: 13, color: P.INK });
+      label(ctx, '→ le sélecteur de mode apparaît', b.x, y + 32, { size: 13 });
+      label(ctx, 'lève 1 à 5 doigts pour choisir', b.x, y + 54, { size: 13 });
       return;
     }
     const f = S.pinchFinger;
@@ -449,38 +449,40 @@ export class Plate {
     ctx.restore();
   }
 
+  /** Sélecteur de mode : 5 pastilles numérotées au-dessus de la main, celle du nombre de doigts levés ressort. */
   drawArc(ctx, arc, hand, vr, scale) {
     const p = hand.screen[LM.WRIST];
     const x = vr.x + arc.anchor.x * vr.w;
     const y = vr.y + Math.min(p.y, arc.anchor.y) * vr.h;
-    const R = scale * 0.2;
     const n = ARC_MODES.length;
-    const start = Math.PI * 1.1;
-    const span = (Math.PI * 0.8) / n;
+    const cell = Math.min(64, scale * 0.09);
+    const gap = 10;
+    const totalW = n * cell + (n - 1) * gap;
+    const left = x - totalW / 2;
+    const top = y - cell - 60;
     ctx.save();
+    roundRect(ctx, left - 14, top - 14, totalW + 28, cell + 48, 18);
+    ctx.fillStyle = 'rgba(11, 7, 32, 0.8)';
+    ctx.fill();
+    ctx.strokeStyle = P.FAINT;
+    ctx.lineWidth = 1;
+    ctx.stroke();
     for (let i = 0; i < n; i++) {
-      const a0 = start + i * span + 0.02;
-      const a1 = start + (i + 1) * span - 0.02;
-      const on = arc.hover === i;
+      const cx = left + i * (cell + gap);
+      const on = arc.hover === i + 1;
       const color = P.MODE_COLORS[ARC_MODES[i]];
-      ctx.beginPath();
-      ctx.arc(x, y, R + 26, a0, a1);
-      ctx.arc(x, y, R - 22, a1, a0, true);
-      ctx.closePath();
+      roundRect(ctx, cx, top, cell, cell, 14);
       ctx.fillStyle = on ? color : `${color}33`;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
       ctx.fill();
-      ctx.stroke();
-      const am = (a0 + a1) / 2;
-      label(ctx, ARC_NAMES[ARC_MODES[i]], x + Math.cos(am) * (R + 2), y + Math.sin(am) * (R + 2) + 4, {
-        size: 12,
-        align: 'center',
-        color: on ? '#190508' : P.INK,
-        weight: 700,
-      });
+      if (!on) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      label(ctx, String(i + 1), cx + cell / 2, top + cell * 0.45, { size: 18, align: 'center', color: on ? '#190508' : P.INK, weight: 700 });
+      label(ctx, ARC_NAMES[ARC_MODES[i]], cx + cell / 2, top + cell * 0.8, { size: 9, align: 'center', color: on ? '#190508' : P.DIM });
     }
-    label(ctx, 'ouvrir = choisir · dos = annuler', x, y + 26, { size: 11, align: 'center', color: P.DIM });
+    label(ctx, 'lève 1 à 5 doigts pour choisir', x, top + cell + 26, { size: 11, align: 'center', color: P.INK });
     ctx.restore();
   }
 }

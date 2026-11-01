@@ -104,30 +104,37 @@ describe('pincement', () => {
   });
 });
 
-const rhand = (label, palmFacing, x = 0.5) => ({ label, palmFacing, palm: { x, y: 0.5 }, size: 0.1 });
+describe('sélecteur de mode (poing puis nombre de doigts)', () => {
+  const rhand = (label, count = null) => ({ label, count, palm: { x: 0.5, y: 0.5 }, size: 0.1 });
 
-describe('arc des modes', () => {
-  it('poing dos -> ouvert, glisser -> case, main ouverte paume -> choix', () => {
-    const arc = new ArcSelector({ summonFrames: 3 });
+  it('poing tenu -> ouvert, nombre de doigts tenu -> mode choisi', () => {
+    const arc = new ArcSelector({ summonFrames: 3, confirmFrames: 3 });
     let ev;
-    for (let i = 0; i < 3; i++) ev = arc.update(rhand('fist', false), i * 33);
+    for (let i = 0; i < 3; i++) ev = arc.update(rhand('fist'), i * 33);
     expect(ev.type).toBe('opened');
-    arc.update(rhand('fist', false, 0.5 + 0.22), 200); // +2 cases
-    expect(arc.hover).toBe(4);
-    expect(arc.update(rhand('open', true, 0.72), 250)).toEqual({ type: 'selected', mode: 'sculpt' });
+    for (let i = 0; i < 3; i++) ev = arc.update(rhand('two', 2), 200 + i * 33);
+    expect(ev).toEqual({ type: 'selected', mode: 'bass' });
   });
 
-  it('main ouverte dos à la caméra = annuler', () => {
-    const arc = new ArcSelector({ summonFrames: 1 });
-    arc.update(rhand('fist', false), 0);
-    expect(arc.update(rhand('open', false), 50).type).toBe('cancelled');
+  it('changer de nombre de doigts avant la confirmation redémarre la tenue', () => {
+    const arc = new ArcSelector({ summonFrames: 1, confirmFrames: 3 });
+    arc.update(rhand('fist'), 0);
+    arc.update(rhand('two', 2), 10);
+    arc.update(rhand('two', 2), 40);
+    expect(arc.update(rhand('three', 3), 70).type).toBe(null); // le compteur repart à 1
+    expect(arc.hover).toBe(3);
   });
 
-  it('un poing paume vers la caméra n\'ouvre pas l\'arc (sauf arc simplifié)', () => {
+  it('n\'importe quelle orientation du poing ouvre le sélecteur (plus de dos/paume)', () => {
     const arc = new ArcSelector({ summonFrames: 1 });
-    expect(arc.update(rhand('fist', true), 0).type).toBe(null);
-    const simple = new ArcSelector({ summonFrames: 1, requireBack: false });
-    expect(simple.update(rhand('fist', true), 0).type).toBe('opened');
+    expect(arc.update(rhand('fist'), 0).type).toBe('opened');
+  });
+
+  it('la main disparaît -> annule après le délai', () => {
+    const arc = new ArcSelector({ summonFrames: 1, lostMs: 100 });
+    arc.update(rhand('fist'), 0);
+    expect(arc.update(null, 50).type).toBe(null);
+    expect(arc.update(null, 200).type).toBe('cancelled');
   });
 });
 

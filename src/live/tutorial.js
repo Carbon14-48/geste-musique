@@ -5,7 +5,6 @@ import { POSES, blendPose, drawPuppet } from './puppet.js';
 import * as Palette from '../core/palette.js';
 
 const P = POSES;
-const back = (pose) => ({ ...pose, back: true });
 const L = (pose, x = 0.3, y = 0.6) => ({ pose, x, y });
 const R = (pose, x = 0.7, y = 0.6) => ({ pose, x, y });
 
@@ -70,14 +69,13 @@ export const LESSONS = [
   },
   {
     title: 'choisir un mode',
-    text: 'Main droite : poing, dos de la main vers la caméra. L\'arc apparaît : glisse, puis ouvre la main paume vers la caméra.',
-    arrow: { y: 0.3, from: 0.55, to: 0.8, horizontal: true },
+    text: 'Main droite : fais un poing, le sélecteur apparaît. Lève 1 à 5 doigts pour choisir le mode.',
     frames: [
-      { at: 0, right: R(P.palm, 0.55, 0.6) },
-      { at: 0.2, right: R(back(P.fist), 0.55, 0.6) },
-      { at: 0.55, right: R(back(P.fist), 0.8, 0.6) },
-      { at: 0.75, right: R(P.open, 0.8, 0.6) },
-      { at: 1, right: R(P.open, 0.8, 0.6) },
+      { at: 0, right: R(P.palm) },
+      { at: 0.25, right: R(P.fist) },
+      { at: 0.5, right: R(P.two) },
+      { at: 0.8, right: R(P.two) },
+      { at: 1, right: R(P.palm) },
     ],
     check: (s, b) => s.arcSelections > b.arcSelections,
   },

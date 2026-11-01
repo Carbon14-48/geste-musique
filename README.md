@@ -22,7 +22,7 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
   - rotation du poignet = filtre ;
   - **changer d'instrument** : pouce + index tenus ~0,5 s = suivant ; pouce + auriculaire = précédent (gestes libres, pas utilisés par les accords).
 - **Main droite** :
-  - poing dos à la caméra → l'arc des modes apparaît ; on glisse, puis on ouvre la main pour choisir ;
+  - poing → le sélecteur de mode apparaît ; lever 1 à 5 doigts choisit directement le mode ;
   - pincer le pouce avec un doigt choisit une piste, et la rotation du poignet règle sa valeur ;
   - **mode batterie** : le nombre de doigts levés choisit directement le rythme (1 = base, 2 = groove, 3 = chargé, 4 = roulements), sans pincement ni rotation ; baisser la main garde le rythme en cours.
 - **Instruments enregistrés** : piano, guitares, violon, violoncelle, flûte, saxophone, clarinette, trompette, harpe, orgue, harmonium, xylophone, ou synthé.
