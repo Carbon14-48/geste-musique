@@ -85,11 +85,12 @@ export const LESSONS = [
   },
   {
     title: 'lancer la batterie',
-    text: 'En mode batterie (touche 1 ou arc) : pince pouce + index et tourne le poignet. Lâche : le rythme continue.',
+    text: 'En mode batterie (touche 1 ou arc) : lève 1, 2 ou 3 doigts pour choisir le rythme. Baisse la main : le rythme continue.',
     frames: [
-      { at: 0, right: R({ ...P.pinchIndex, rot: -35 }) },
-      { at: 0.5, right: R({ ...P.pinchIndex, rot: 35 }) },
-      { at: 1, right: R({ ...P.pinchIndex, rot: -35 }) },
+      { at: 0, right: R(P.one) },
+      { at: 0.35, right: R(P.two) },
+      { at: 0.7, right: R(P.three) },
+      { at: 1, right: R(P.one) },
     ],
     check: (s, b) => s.drumChanges > b.drumChanges,
   },

@@ -528,13 +528,13 @@ class GesteLive {
       if (p.ended !== null) mode.release(p.ended);
       if (R) {
         const h = this.norm(R.height);
+        const drumLevel = this.modes.drums.level;
         if (p.finger !== null) {
           const lead = this.audio.leadNotes[p.finger];
-          const drums = this.modes.drums.levels.join();
           mode.hold(p.finger, R, h);
           if (this.audio.leadNotes[p.finger] !== lead) this.stats.melodyNotes++;
-          if (this.modes.drums.levels.join() !== drums) this.stats.drumChanges++;
         } else mode.idle(R, h);
+        if (this.modes.drums.level !== drumLevel) this.stats.drumChanges++;
       }
     }
   }

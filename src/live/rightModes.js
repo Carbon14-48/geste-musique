@@ -24,17 +24,24 @@ export function createModes(audio, chordHand) {
     drums: {
       title: 'batterie',
       tracks: ['grosse caisse', 'caisse claire', 'charleston', 'toms'],
+      // Un seul niveau pour les 4 pistes : le nombre de doigts levés le choisit directement
+      // (1 = base, 2 = groove, 3 = chargé, 4 = roulements). Pas de pincement ni de rotation du
+      // poignet : lâcher ou baisser la main garde le dernier niveau choisi.
+      level: 0,
       levels: [0, 0, 0, 0],
-      hold(f, hand) {
-        this.levels[f] = Math.round(hand.roll * 4);
-        audio.drumLevels[f] = this.levels[f];
-      },
+      hold() {}, // la batterie ne se règle plus par pincement
       release() {},
       idle(hand) {
-        audio.setDrumCutoff(hand.roll);
+        if (hand.count !== null && hand.count >= 1 && hand.count <= 4) {
+          this.level = hand.count;
+          this.levels = [this.level, this.level, this.level, this.level];
+          audio.drumLevels = this.levels;
+        }
       },
-      readout(f) {
-        return f === null ? '' : `${this.tracks[f]} · ${DRUM_LEVEL_NAMES[this.levels[f]]}`;
+      readout() {
+        return this.level === 0
+          ? 'lève 1, 2 ou 3 doigts pour choisir le rythme'
+          : `rythme : ${DRUM_LEVEL_NAMES[this.level]}`;
       },
       families: DRUM_FAMILIES,
     },

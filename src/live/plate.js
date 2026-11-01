@@ -304,10 +304,29 @@ export class Plate {
     const f = S.pinchFinger;
     const rowH = portrait ? 22 : 30;
     if (mode === 'drums') {
+      // Sélecteur : le nombre de doigts levés choisit le rythme, le niveau actif ressort en couleur.
+      const gap = 10;
+      const selW = (b.w - 3 * gap) / 4;
+      for (let i = 1; i <= 4; i++) {
+        const x = b.x + (i - 1) * (selW + gap);
+        const on = st.level === i;
+        roundRect(ctx, x, y, selW, 44, 12);
+        ctx.fillStyle = on ? modeColor : 'rgba(255,255,255,0.06)';
+        ctx.fill();
+        if (!on) {
+          ctx.strokeStyle = P.FAINT;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        label(ctx, String(i), x + selW / 2, y + 20, { size: 16, align: 'center', color: on ? '#190508' : P.INK, weight: 700 });
+        label(ctx, DRUM_LEVEL_NAMES[i], x + selW / 2, y + 36, { size: 10, align: 'center', color: on ? '#190508' : P.DIM });
+      }
+      y += 60;
+
       const cell = Math.min(16, (b.w - 4) / 16 - 2);
       DRUM_FAMILIES.forEach((fam, r) => {
         const ry = y + 14 + r * (rowH + 12);
-        label(ctx, `${st.tracks[r]} · ${DRUM_LEVEL_NAMES[st.levels[r]]}`, b.x, ry, { size: 12, color: f === r ? modeColor : P.DIM });
+        label(ctx, st.tracks[r], b.x, ry, { size: 12, color: st.level > 0 ? modeColor : P.DIM });
         const vel = drumBar(fam, st.levels[r], S.bar ?? 0);
         for (let s = 0; s < 16; s++) {
           const x = b.x + s * (cell + 2);

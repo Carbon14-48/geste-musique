@@ -2,7 +2,7 @@
 // Une mesure = 16 doubles-croches ; une phrase = 4 mesures (les roulements tombent sur la 4e).
 
 export const DRUM_FAMILIES = ['kick', 'snare', 'hats', 'toms'];
-export const DRUM_LEVEL_NAMES = ['silence', 'base', 'fantômes', 'groove', 'roulements'];
+export const DRUM_LEVEL_NAMES = ['silence', 'base', 'groove', 'chargé', 'roulements'];
 
 // Motifs par famille et par niveau : liste de [pas, vélocité].
 const BASE = {

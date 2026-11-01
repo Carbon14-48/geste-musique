@@ -325,13 +325,39 @@ function fakeAudio() {
 }
 
 describe('les 5 modes de la main droite (arc)', () => {
-  it('batterie : la rotation du poignet règle le niveau du pad tenu', () => {
+  it('batterie : le nombre de doigts levés choisit directement le rythme des 4 pistes', () => {
     const audio = fakeAudio();
     const modes = createModes(audio, {});
-    modes.drums.hold(1, { roll: 0.5 });
-    expect(modes.drums.levels[1]).toBe(2);
-    expect(audio.drumLevels[1]).toBe(2);
-    expect(modes.drums.readout(1)).toContain('caisse claire');
+    expect(modes.drums.readout()).toContain('lève 1, 2 ou 3 doigts');
+    modes.drums.idle({ count: 1 });
+    expect(modes.drums.levels).toEqual([1, 1, 1, 1]);
+    expect(audio.drumLevels).toEqual([1, 1, 1, 1]);
+    expect(modes.drums.readout()).toBe('rythme : base');
+    modes.drums.idle({ count: 3 });
+    expect(modes.drums.levels).toEqual([3, 3, 3, 3]);
+    expect(modes.drums.readout()).toBe('rythme : chargé');
+  });
+
+  it('batterie : 4 doigts = roulements, le pincement n\'a plus d\'effet', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.drums.idle({ count: 4 });
+    expect(modes.drums.readout()).toBe('rythme : roulements');
+    modes.drums.hold(0, { roll: 0.9 }); // la batterie ne se règle plus par pincement
+    expect(modes.drums.levels).toEqual([4, 4, 4, 4]);
+  });
+
+  it('batterie : lâcher ou baisser la main (pas de doigts stables) garde le dernier rythme', () => {
+    const audio = fakeAudio();
+    const modes = createModes(audio, {});
+    modes.drums.idle({ count: 2 });
+    expect(modes.drums.level).toBe(2);
+    modes.drums.idle({ count: null }); // main en transition / hors stabilisation
+    expect(modes.drums.level).toBe(2);
+    modes.drums.idle({ count: 0 }); // poing : réservé à l'arc des modes, ignoré ici
+    expect(modes.drums.level).toBe(2);
+    modes.drums.idle({ count: 5 }); // main ouverte : hors plage 1-4, ignoré
+    expect(modes.drums.level).toBe(2);
   });
 
   it('basse : les 4 pincements règlent densité, notes, octave et groove', () => {
@@ -511,7 +537,8 @@ describe('Plate.render (Geste Live) : le canvas se dessine sans erreur dans chaq
         { spread: 0 },
       );
       modes.melody.key = key;
-      modes[mode].hold(0, { roll: 0.6 }, 0.5);
+      if (mode === 'drums') modes.drums.idle({ count: 3 });
+      else modes[mode].hold(0, { roll: 0.6 }, 0.5);
       const s = { ...baseState(), mode, modeState: modes[mode], pinchFinger: 0, hands: { left: null, right: fakeHand('right') } };
       expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
     });
