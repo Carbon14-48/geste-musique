@@ -8,14 +8,9 @@ import { SPICE_NAMES } from './theory.js';
 import { MELODY_LANES, laneLabel } from './rightModes.js';
 import { PINCH_FINGERS } from './pinch.js';
 import * as P from '../core/palette.js';
+import { roundRect } from '../core/canvasUtils.js';
 
 const SANS = P.SANS;
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-  else ctx.rect(x, y, w, h);
-}
 
 function label(ctx, text, x, y, { size = 13, color = P.DIM, align = 'left', weight = 500 } = {}) {
   ctx.save();

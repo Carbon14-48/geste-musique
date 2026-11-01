@@ -7,6 +7,8 @@ import { ChordHand } from '../src/live/chordHand.js';
 import { laneNote, createModes } from '../src/live/rightModes.js';
 import { classifyPose, palmFacingCamera } from '../src/core/rules.js';
 import { synthHand, U, D } from './helpers/synthHand.js';
+import { Plate } from '../src/live/plate.js';
+import { fakeCtx } from './helpers/fakeCanvas.js';
 
 const A_MINOR = { root: 9, mode: 'minor' };
 const C_MAJOR = { root: 0, mode: 'major' };
@@ -424,4 +426,112 @@ describe('entraînement TensorFlow.js dans le navigateur', () => {
     model.dispose();
     expect(tf.memory().numTensors).toBe(before);
   }, 30000);
+});
+
+function fakeHand(role) {
+  return {
+    role,
+    label: 'palm',
+    count: 5,
+    height: 0.5,
+    roll: 0.5,
+    pinch: 0.1,
+    palmFacing: true,
+    pointsDown: false,
+    screen: Array.from({ length: 21 }, (_, i) => ({ x: 0.4 + i * 0.01, y: 0.5 + i * 0.005 })),
+    fingers: [true, true, true, true, true],
+  };
+}
+
+describe('Plate.render (Geste Live) : le canvas se dessine sans erreur dans chaque état', () => {
+  const key = { root: 9, mode: 'minor' };
+  const baseState = () => ({
+    video: null,
+    mirror: true,
+    scrim: 0.25,
+    started: true,
+    hands: { left: null, right: null },
+    chord: null,
+    keyName: 'La mineur',
+    bpm: 100,
+    recording: false,
+    recordingTime: '00:00',
+    mode: null,
+    modeState: null,
+    pinchFinger: null,
+    arc: { open: false, hover: null, anchor: { x: 0.7, y: 0.6 } },
+    wheel: { open: false, hover: 0, anchor: { x: 0.3, y: 0.6 }, items: INSTRUMENTS },
+    step: 0,
+    bar: 0,
+    leftHeight: 0.5,
+    rightHeight: 0.5,
+    leftRoll: 0.5,
+    rightRoll: 0.5,
+    instrument: 'piano',
+    muted: false,
+  });
+
+  it('aucune main (écran de démarrage)', () => {
+    const plate = new Plate();
+    expect(() => plate.render(fakeCtx(), 1280, 720, baseState())).not.toThrow();
+  });
+
+  it('avant de démarrer (écran d\'accueil, ondes + taches animées)', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), started: false };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  it('accord actif (main gauche)', () => {
+    const plate = new Plate();
+    const chordHand = new ChordHand({ setChord: () => {}, releaseChord: () => {}, nextEighth: () => 0, ready: false, setPadTone: () => {} });
+    let chord;
+    for (let i = 0; i < 4; i++) chord = chordHand.update(fakeHand('left'), key, 0.5, i * 33);
+    const s = { ...baseState(), hands: { left: fakeHand('left'), right: null }, chord };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  it('arc ouvert (choix du mode, main droite)', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), hands: { left: null, right: fakeHand('right') }, arc: { open: true, hover: 1, anchor: { x: 0.7, y: 0.6 } } };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  it('roue d\'instruments ouverte (main gauche)', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), hands: { left: fakeHand('left'), right: null }, wheel: { open: true, hover: 2, anchor: { x: 0.3, y: 0.6 }, items: INSTRUMENTS } };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  for (const mode of ['drums', 'bass', 'melody', 'fx', 'sculpt']) {
+    it(`mode "${mode}" actif avec un doigt pincé`, () => {
+      const plate = new Plate();
+      const modes = createModes(
+        { drumLevels: [0, 0, 0, 0], setDrumCutoff() {}, bassParams: null, setBassResonance() {}, leadOn() {}, leadOff() {}, setLeadFilter() {}, setFx() {}, setArp() {}, setEnvelope() {}, setTremolo() {}, setGrit() {} },
+        { spread: 0 },
+      );
+      modes.melody.key = key;
+      modes[mode].hold(0, { roll: 0.6 }, 0.5);
+      const s = { ...baseState(), mode, modeState: modes[mode], pinchFinger: 0, hands: { left: null, right: fakeHand('right') } };
+      expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+    });
+  }
+
+  it('silence (deux poings)', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), muted: true };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  it('enregistrement en cours', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), recording: true, recordingTime: '00:12' };
+    expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
+  });
+
+  it('écran vertical (portrait, mobile)', () => {
+    const plate = new Plate();
+    const s = { ...baseState(), hands: { left: fakeHand('left'), right: fakeHand('right') } };
+    expect(() => plate.render(fakeCtx(), 390, 844, s)).not.toThrow();
+  });
 });

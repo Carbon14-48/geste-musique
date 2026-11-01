@@ -10,6 +10,11 @@ import custom from '../src/modes/custom.js';
 import { GlobalGestures } from '../src/modes/global.js';
 import { GUITAR_CHORDS, degreeToMidi } from '../src/core/scale.js';
 import { LM } from '../src/core/landmarks.js';
+import { Overlay } from '../src/ui/overlay.js';
+import { fakeCanvas } from './helpers/fakeCanvas.js';
+
+// Overlay.resize() lit window.devicePixelRatio ; il n'y a pas de DOM en environnement de test.
+if (typeof window === 'undefined') globalThis.window = { devicePixelRatio: 1 };
 
 function fakeApp(mode) {
   const calls = [];
@@ -257,5 +262,48 @@ describe('mode Mes gestes (appris)', () => {
       custom.frame(app, frame([], { right: hand() }, i * 33));
     }
     expect(app.calls.filter((c) => c[0] === 'noteOn')).toEqual([]);
+  });
+});
+
+describe('Overlay.draw (Studio) : le canvas se dessine sans erreur dans chaque état', () => {
+  const skeletonHand = (role) => hand({ role, screen: Array.from({ length: 21 }, () => ({ x: 0.5, y: 0.5 })) });
+
+  it('aucune main', () => {
+    const overlay = new Overlay(fakeCanvas());
+    expect(() => overlay.draw(frame([], {}), notes, fakeApp(notes))).not.toThrow();
+  });
+
+  it('jeu verrouillé', () => {
+    const overlay = new Overlay(fakeCanvas());
+    const app = fakeApp(notes);
+    app.locked = true;
+    expect(() => overlay.draw(frame([], { right: skeletonHand('right') }), notes, app)).not.toThrow();
+  });
+
+  it('mode batterie (pads dessinés)', () => {
+    const overlay = new Overlay(fakeCanvas());
+    const app = fakeApp(drums);
+    drums.enter(app);
+    expect(() => overlay.draw(frame([], { right: skeletonHand('right') }, 100), drums, app)).not.toThrow();
+  });
+
+  it('mode piano (clavier dessiné)', () => {
+    const overlay = new Overlay(fakeCanvas());
+    const app = fakeApp(piano);
+    piano.enter(app);
+    expect(() => overlay.draw(frame([], { left: skeletonHand('left'), right: skeletonHand('right') }, 100), piano, app)).not.toThrow();
+  });
+
+  it('mode thérémine (lignes dessinées)', () => {
+    const overlay = new Overlay(fakeCanvas());
+    const app = fakeApp(theremin);
+    theremin.enter(app);
+    expect(() => overlay.draw(frame([], { right: skeletonHand('right') }), theremin, app)).not.toThrow();
+  });
+
+  it('les deux mains, squelette masqué', () => {
+    const overlay = new Overlay(fakeCanvas());
+    overlay.showSkeleton = false;
+    expect(() => overlay.draw(frame([], { left: skeletonHand('left'), right: skeletonHand('right') }), binary, fakeApp(binary))).not.toThrow();
   });
 });

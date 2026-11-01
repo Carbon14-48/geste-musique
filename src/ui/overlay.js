@@ -3,14 +3,9 @@
 import { CONNECTIONS, LM } from '../core/landmarks.js';
 import { POSE_NAMES } from '../core/rules.js';
 import * as P from '../core/palette.js';
+import { roundRect } from '../core/canvasUtils.js';
 
 const COLORS = { left: P.LEFT, right: P.RIGHT };
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
-  else ctx.rect(x, y, w, h);
-}
 
 export class Overlay {
   constructor(canvas) {
