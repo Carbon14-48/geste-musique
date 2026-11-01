@@ -17,6 +17,8 @@ const JARGON = [
   /IndexedDB/i,
   /précision/i,
   /\bepoch/i,
+  /réseau/i,
+  /entraîn/i,
 ];
 
 const root = fileURLToPath(new URL('..', import.meta.url));
