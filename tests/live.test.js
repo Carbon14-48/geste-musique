@@ -221,6 +221,7 @@ import { HandTracker } from '../src/core/handTracker.js';
 import { openness } from '../src/core/rules.js';
 import { BrowserPoseModel } from '../src/ml/trainer.js';
 import { normalizePose } from '../src/core/landmarks.js';
+import * as tf from '@tensorflow/tfjs';
 import { H } from './helpers/synthHand.js';
 
 describe('rôles des mains', () => {
@@ -403,5 +404,24 @@ describe('entraînement TensorFlow.js dans le navigateur', () => {
       if (model.predict(normalizePose(world, 'Right')).label === label) ok++;
     }
     expect(ok / 4).toBeGreaterThanOrEqual(0.9);
+  }, 30000);
+
+  it('plusieurs ré-entraînements de suite (mode apprentissage) ne fuient pas de mémoire', async () => {
+    const samples = [];
+    for (const [label, st] of Object.entries({ fist: [D, D, D, D, D], palm: [U, U, U, U, U] })) {
+      for (let i = 0; i < 10; i++) {
+        const { world } = synthHand(st, { rotateDeg: i });
+        samples.push({ label, x: normalizePose(world, 'Right') });
+      }
+    }
+    const before = tf.memory().numTensors;
+    let model = null;
+    for (let i = 0; i < 3; i++) {
+      const next = await BrowserPoseModel.train(samples, { epochs: 5 });
+      model?.dispose(); // simule useModel() : l'ancien modèle est libéré avant d'adopter le nouveau
+      model = next;
+    }
+    model.dispose();
+    expect(tf.memory().numTensors).toBe(before);
   }, 30000);
 });

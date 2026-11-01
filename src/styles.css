@@ -406,6 +406,27 @@ kbd {
   .topbar {
     padding: 10px 16px;
   }
+
+  /* Sur petit écran, les <select> natifs s'élargissent au texte de leur plus longue option
+     et finissent chacun seul sur sa ligne : on les contraint pour que 2 tiennent côte à côte. */
+  .topbar label {
+    flex: 1 1 150px;
+    min-width: 0;
+  }
+
+  .topbar label select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .topbar .spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+
+  .topbar button {
+    flex: 1 1 auto;
+  }
 }
 
 /* --- Écran d'accueil ------------------------------------------------------------------- */

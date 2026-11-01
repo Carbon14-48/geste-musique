@@ -330,6 +330,8 @@ class GesteLive {
   }
 
   useModel(model, source) {
+    // Libère les poids de l'ancien modèle (TensorFlow.js ne le ferait jamais tout seul).
+    if (this.tracker.poseModel && this.tracker.poseModel !== model) this.tracker.poseModel.dispose?.();
     this.tracker.poseModel = model;
     this.modelSource = source;
     $('learn-source').textContent = source;

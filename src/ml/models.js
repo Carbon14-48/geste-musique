@@ -40,6 +40,12 @@ export class PoseModel {
     for (let i = 1; i < probs.length; i++) if (probs[i] > probs[best]) best = i;
     return { label: this.labels[best], confidence: probs[best] };
   }
+
+  /** Libère les poids (GPU/CPU) : à appeler avant de remplacer ce modèle par un autre. */
+  dispose() {
+    this.model.optimizer?.dispose?.();
+    this.model.dispose();
+  }
 }
 
 /** Classifieur de gestes dynamiques (séquences de T images x 67 valeurs). */

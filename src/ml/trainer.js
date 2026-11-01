@@ -44,7 +44,9 @@ export class BrowserPoseModel {
     if (labels.length < 2) throw new Error('il faut au moins deux poses enregistrées');
     const model = buildModel(labels.length);
     const xs = tf.tensor2d(samples.map((s) => s.x));
-    const ys = tf.oneHot(tf.tensor1d(samples.map((s) => labels.indexOf(s.label)), 'int32'), labels.length);
+    const labelIdx = tf.tensor1d(samples.map((s) => labels.indexOf(s.label)), 'int32');
+    const ys = tf.oneHot(labelIdx, labels.length);
+    labelIdx.dispose();
     let accuracy = 0;
     try {
       await model.fit(xs, ys, {
@@ -99,5 +101,11 @@ export class BrowserPoseModel {
     let best = 0;
     for (let i = 1; i < probs.length; i++) if (probs[i] > probs[best]) best = i;
     return { label: this.labels[best], confidence: probs[best] };
+  }
+
+  /** Libère les poids et l'état de l'optimiseur (GPU/CPU) : à appeler avant de remplacer ce modèle par un autre. */
+  dispose() {
+    this.model.optimizer?.dispose?.();
+    this.model.dispose();
   }
 }
