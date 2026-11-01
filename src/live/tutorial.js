@@ -2,6 +2,7 @@
 // Chaque leçon se valide toute seule quand le joueur réussit le geste devant la caméra.
 
 import { POSES, blendPose, drawPuppet } from './puppet.js';
+import * as Palette from '../core/palette.js';
 
 const P = POSES;
 const back = (pose) => ({ ...pose, back: true });
@@ -187,8 +188,6 @@ export class Tutorial {
     const ctx = this.ctx;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(236, 233, 226, 0.12)';
-    ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
     const lesson = LESSONS[this.index];
     const t = (now % 3200) / 3200;
     if (lesson.arrow) this.drawArrow(ctx, lesson.arrow, w, h);
@@ -199,18 +198,18 @@ export class Tutorial {
       // y de la leçon = position du poignet entre « main tout en haut » et le bas du cadre.
       const wy = size * 1.75 + s.y * (h - 30 - size * 1.75);
       const wx = Math.max(size * 0.8, Math.min(w - size * 0.8, s.x * w));
-      drawPuppet(ctx, wx, wy, size, s.pose, side);
-      ctx.font = '400 10px "Geist Mono", monospace';
-      ctx.fillStyle = 'rgba(236, 233, 226, 0.5)';
+      drawPuppet(ctx, wx, wy, size, s.pose, side, { ink: side === 'left' ? Palette.LEFT_RGB : Palette.RIGHT_RGB, accent: Palette.ACCENT });
+      ctx.font = `500 12px ${Palette.SANS}`;
+      ctx.fillStyle = Palette.DIM;
       ctx.textAlign = 'center';
-      ctx.fillText(side === 'left' ? 'MAIN GAUCHE' : 'MAIN DROITE', wx, h - 10);
+      ctx.fillText(side === 'left' ? 'main gauche' : 'main droite', wx, h - 10);
     }
   }
 
   drawArrow(ctx, a, w, h) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(244, 194, 107, 0.7)';
-    ctx.fillStyle = 'rgba(244, 194, 107, 0.7)';
+    ctx.strokeStyle = `${Palette.ACCENT}b3`;
+    ctx.fillStyle = `${Palette.ACCENT}b3`;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     const [x1, y1, x2, y2] = a.horizontal ? [a.from * w, a.y * h, a.to * w, a.y * h] : [a.x * w, a.from * h, a.x * w, a.to * h];

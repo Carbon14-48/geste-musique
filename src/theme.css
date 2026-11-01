@@ -1,16 +1,30 @@
-/* Palette et typographie partagées entre Geste Live et le Studio. */
+/* Palette et typographie partagées entre Geste Live et le Studio.
+   Les couleurs de canvas (plate.js, overlay.js, puppet.js) vivent dans src/core/palette.js :
+   si tu changes une couleur ici, change aussi la constante correspondante là-bas. */
 
 :root {
-  --bg: #06070a;
-  --ink: #ece9e2;
-  --dim: rgba(236, 233, 226, 0.55);
-  --faint: rgba(236, 233, 226, 0.16);
-  --accent: #f4c26b;
-  --accent-text: #1b1300;
-  --danger: #ff5d5d;
-  --left: #4fc3f7;
-  --right: #ff8a65;
-  --sans: Geist, 'Helvetica Neue', Arial, sans-serif;
-  --mono: 'Geist Mono', ui-monospace, monospace;
+  --bg: #0b0720;
+  --bg-2: #140d33;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.1);
+  --ink: #f3f1fb;
+  --dim: rgba(243, 241, 251, 0.72);
+  --faint: rgba(243, 241, 251, 0.16);
+
+  --accent: #ffcf5c;
+  --accent-2: #ff6fae;
+  --accent-text: #1b0b1f;
+  --danger: #ff4d5e;
+
+  --left: #c9b6ff;
+  --right: #5eead4;
+
+  --mode-drums: #ff8a3d;
+  --mode-bass: #4da3ff;
+  --mode-melody: #ff6fae;
+  --mode-fx: #34e37a;
+  --mode-sculpt: #a78bfa;
+
+  --sans: Geist, 'Helvetica Neue', Arial, system-ui, sans-serif;
   color-scheme: dark;
 }

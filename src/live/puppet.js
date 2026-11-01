@@ -90,7 +90,7 @@ export function blendPose(a, b, t) {
  * Dessine la main.
  * @param {'left'|'right'} side main du joueur (vue en miroir : le pouce de la main droite est à gauche)
  */
-export function drawPuppet(ctx, x, y, size, pose, side = 'right', { ink = '236, 233, 226', accent = '#f4c26b' } = {}) {
+export function drawPuppet(ctx, x, y, size, pose, side = 'right', { ink = '243, 241, 251', accent = '#ffcf5c' } = {}) {
   const { thumb, fingers } = puppetPoints(pose);
   // Main gauche = symétrique ; dos de la main = encore symétrique (le pouce change de côté).
   const flip = (side === 'left') !== !!pose.back ? -1 : 1;
