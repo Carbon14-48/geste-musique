@@ -111,6 +111,30 @@ export class Plate {
     ctx.restore();
   }
 
+  /** Ondes sonores animées derrière l'écran d'accueil (avant de démarrer). */
+  drawWaves(ctx, w, h, t) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const cy = h * 0.55;
+    const waves = [
+      { amp: h * 0.045, freq: 0.006, speed: 0.0012, color: P.ACCENT, phase: 0 },
+      { amp: h * 0.03, freq: 0.009, speed: -0.0009, color: P.ACCENT_2, phase: 2 },
+      { amp: h * 0.022, freq: 0.012, speed: 0.0015, color: P.MODE_COLORS.fx, phase: 4 },
+    ];
+    for (const wv of waves) {
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += 10) {
+        const y = cy + Math.sin(x * wv.freq + t * wv.speed + wv.phase) * wv.amp;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = `${wv.color}40`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   render(ctx, w, h, S) {
     const portrait = h > w;
     const m = 18;
@@ -122,7 +146,10 @@ export class Plate {
     const dt = this.lastRender ? Math.min(100, now0 - this.lastRender) : 16;
     this.lastRender = now0;
 
-    if (!S.started) this.drawBlobs(ctx, w, h, now0, false);
+    if (!S.started) {
+      this.drawBlobs(ctx, w, h, now0, false);
+      this.drawWaves(ctx, w, h, now0);
+    }
 
     // Caméra en miroir, éclaircie si « améliorer l'image » est coché (MediaPipe reçoit l'image brute).
     const vr = this.videoRect(S.video, w, h);
@@ -208,10 +235,10 @@ export class Plate {
       ctx.textAlign = 'center';
       ctx.fillText('silence', w / 2, h / 2);
       ctx.textAlign = 'left';
-      label(ctx, 'ouvrez les mains pour reprendre · plus de 1,5 s = tout s\'arrête', w / 2, h / 2 + 36, { size: 13, align: 'center' });
+      label(ctx, 'ouvre les mains pour reprendre · plus de 1,5 s = tout s\'arrête', w / 2, h / 2 + 36, { size: 13, align: 'center' });
     }
     if (!S.hands?.left && !S.hands?.right && S.started && !S.muted) {
-      label(ctx, 'montrez vos deux mains · reculez jusqu\'à voir vos coudes', w / 2, h / 2, { size: 15, align: 'center' });
+      label(ctx, 'montre tes deux mains · recule jusqu\'à voir tes coudes', w / 2, h / 2, { size: 15, align: 'center' });
     }
     ctx.restore();
   }
@@ -231,7 +258,7 @@ export class Plate {
     ctx.fillStyle = c ? chordColor : P.FAINT;
     ctx.fillText(c ? c.name : '—', b.x, b.y + big + 14);
     ctx.restore();
-    const info = c ? [c.roman, SPICE_NAMES[c.spice], c.flip ? 'parallèle' : null, c.flat ? 'demi-ton bas' : null].filter(Boolean).join(' · ') : 'comptez un nombre sur vos doigts';
+    const info = c ? [c.roman, SPICE_NAMES[c.spice], c.flip ? 'parallèle' : null, c.flat ? 'demi-ton bas' : null].filter(Boolean).join(' · ') : 'compte un nombre sur tes doigts';
     label(ctx, info, b.x, b.y + big + 38, { size: 13, color: c ? P.INK : P.DIM });
 
     // Échelle des épices : la hauteur de la main enrichit l'accord.
@@ -276,7 +303,7 @@ export class Plate {
     if (!mode || !st) {
       label(ctx, 'poing, dos de la main vers la caméra', b.x, y + 10, { size: 13, color: P.INK });
       label(ctx, '→ l\'arc des modes apparaît', b.x, y + 32, { size: 13 });
-      label(ctx, 'glissez · ouvrez la main pour choisir', b.x, y + 54, { size: 13 });
+      label(ctx, 'glisse · ouvre la main pour choisir', b.x, y + 54, { size: 13 });
       return;
     }
     const f = S.pinchFinger;
@@ -350,7 +377,7 @@ export class Plate {
       });
       y += 4 * (rowH + 10) + 20;
     }
-    label(ctx, f !== null && f !== undefined ? `pincé : ${PINCH_FINGERS[f]} · ${st.readout(f)}` : st.readout(null) || 'pincez pouce + doigt pour choisir une piste', b.x, y, { size: 12, color: f !== null && f !== undefined ? P.INK : P.DIM });
+    label(ctx, f !== null && f !== undefined ? `pincé : ${PINCH_FINGERS[f]} · ${st.readout(f)}` : st.readout(null) || 'pince pouce + doigt pour choisir une piste', b.x, y, { size: 12, color: f !== null && f !== undefined ? P.INK : P.DIM });
     if (y + 48 < b.y + b.h + 40) dial(ctx, b.x + 22, y + 38, 18, S.rightRoll, 'rotation', modeColor);
   }
 
@@ -479,7 +506,7 @@ export class Plate {
       ctx.restore();
     }
     ctx.globalAlpha = 1;
-    label(ctx, 'tournez le poignet · ouvrez la main = choisir', x, y + 28, { size: 12, align: 'center', color: P.INK });
+    label(ctx, 'tourne le poignet · ouvre la main = choisir', x, y + 28, { size: 12, align: 'center', color: P.INK });
     ctx.restore();
   }
 }

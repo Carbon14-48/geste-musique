@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23ece9e2' stroke-width='6'/><circle cx='50' cy='50' r='14' fill='%23ece9e2'/></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Geist+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <canvas id="plate" aria-label="Surface de jeu : caméra et instrument"></canvas>
@@ -18,27 +18,31 @@
 
     <section id="intro" class="intro">
       <div class="intro-frame">
-        <p class="kicker">fig. 01 · surface de contrôle à deux mains</p>
-        <h1>GESTE LIVE</h1>
-        <p class="lead">Jouez de la musique avec vos mains. La main gauche joue les accords, la main droite choisit la batterie, la basse, la mélodie, les effets ou le son.</p>
-        <button id="start" class="start">commencer</button>
+        <h1>Geste Live</h1>
+        <p class="lead">Joue de la musique avec tes mains.</p>
+        <button id="start" class="start">🎵 Jouer</button>
         <p id="intro-error" class="error" role="alert"></p>
+        <ul class="tips">
+          <li><span class="tip-icon" aria-hidden="true">📏</span> Recule de 50 à 80 cm</li>
+          <li><span class="tip-icon" aria-hidden="true">💡</span> Place-toi face à la lumière</li>
+          <li><span class="tip-icon" aria-hidden="true">📷</span> Autorise la caméra</li>
+        </ul>
         <p class="small">
           <button id="intro-help" class="link">comment jouer</button> ·
           <a href="studio.html" class="link">studio (8 modes, apprentissage)</a>
         </p>
-        <p class="foot">navigateur · rien à installer · rien n'est envoyé · casque conseillé</p>
+        <p class="foot">navigateur · rien à installer · rien n'est envoyé</p>
       </div>
     </section>
 
     <nav id="rail" class="rail" hidden>
-      <select id="instrument" aria-label="Instrument"></select>
-      <button id="btn-rec">● enregistrer</button>
+      <label class="pill-select"><span aria-hidden="true">🎹</span><select id="instrument" aria-label="Instrument"></select></label>
+      <button id="btn-rec"><span aria-hidden="true">⏺</span> enregistrer</button>
       <select id="rec-format" aria-label="Format de la prise"></select>
-      <button id="btn-settings">réglages</button>
-      <button id="btn-learn">apprendre mes gestes</button>
-      <button id="btn-tutor">comment jouer</button>
-      <button id="btn-help">aide</button>
+      <button id="btn-settings"><span aria-hidden="true">⚙️</span> réglages</button>
+      <button id="btn-learn"><span aria-hidden="true">🤚</span> apprendre mes gestes</button>
+      <button id="btn-tutor"><span aria-hidden="true">🎓</span> comment jouer</button>
+      <button id="btn-help"><span aria-hidden="true">❓</span> aide</button>
     </nav>
 
     <aside id="tutor" class="tutor" hidden aria-label="Tutoriel animé">
@@ -100,7 +104,7 @@
 
     <aside id="panel-help" class="panel" hidden>
       <header><h2>comment jouer</h2><button data-close aria-label="Fermer">×</button></header>
-      <p>Reculez jusqu'à voir vos deux coudes dans l'image, avec la lumière devant vous. Mettez un casque.</p>
+      <p>Recule jusqu'à voir tes deux coudes dans l'image, avec la lumière devant toi. Mets un casque.</p>
       <h3>main gauche · les accords</h3>
       <ul>
         <li><b>1, 2, 3, 4 doigts</b> : accords I, II, III, IV de la tonalité</li>
@@ -109,7 +113,7 @@
         <li><b>doigts vers le bas</b> : l'accord descend d'un demi-ton</li>
         <li><b>hauteur</b> : bas = triade, plus haut = 7e, 9e, 13e (en direct)</li>
         <li><b>tourner le poignet</b> : filtre et longueur des notes</li>
-        <li><b>roue d'instruments</b> : tenez le poing gauche une demi-seconde, tournez le poignet pour choisir l'instrument, ouvrez la main pour valider</li>
+        <li><b>roue d'instruments</b> : tiens le poing gauche une demi-seconde, tourne le poignet pour choisir l'instrument, ouvre la main pour valider</li>
         <li>lâcher la pose arrête l'accord ; la refaire le rejoue</li>
       </ul>
       <h3>les deux mains</h3>
@@ -118,17 +122,17 @@
       </ul>
       <h3>main droite · la mélodie et l'arc des modes</h3>
       <ul>
-        <li>au départ, la main droite joue la <b>mélodie</b> : pincez pouce + index, la hauteur choisit la note</li>
+        <li>au départ, la main droite joue la <b>mélodie</b> : pince pouce + index, la hauteur choisit la note</li>
         <li><b>poing, dos à la caméra</b> : l'arc apparaît</li>
         <li><b>glisser</b> à gauche / à droite : choisir une case</li>
         <li><b>ouvrir la main</b> paume vers la caméra : valider · dos vers la caméra : annuler</li>
       </ul>
       <h3>les 5 modes</h3>
       <ul>
-        <li><b>batterie</b> : pincez pouce + index (grosse caisse), majeur (caisse claire), annulaire (charleston), auriculaire (toms) ; tournez le poignet pour le niveau : silence → base → fantômes → groove → roulements. Lâchez : ça continue.</li>
+        <li><b>batterie</b> : pince pouce + index (grosse caisse), majeur (caisse claire), annulaire (charleston), auriculaire (toms) ; tourne le poignet pour le niveau : silence → base → fantômes → groove → roulements. Lâche : ça continue.</li>
         <li><b>basse</b> : les 4 pincements règlent densité, notes, octaves et groove (tresillo, galop) ; la hauteur règle la résonance.</li>
         <li><b>mélodie</b> : la hauteur choisit la note, le pincement la tient ; un son par doigt.</li>
-        <li><b>fx / dj</b> : delay, réverb, stutter, crush, actifs tant que vous pincez ; le poignet règle l'effet.</li>
+        <li><b>fx / dj</b> : delay, réverb, stutter, crush, actifs tant que tu pinces ; le poignet règle l'effet.</li>
         <li><b>sculpt</b> : arpège, enveloppe, trémolo, grain ; la hauteur ouvre le voicing des accords.</li>
       </ul>
       <p class="small">Un pincement ne compte que si la main est immobile et qu'un autre doigt est levé.</p>

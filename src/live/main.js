@@ -267,7 +267,7 @@ class GesteLive {
       if (this.audio.instrument !== this.s.instrument) {
         this.plate.say(`${instrumentInfo(this.s.instrument).name} indisponible (connexion ?) · synthé à la place`);
       } else {
-        this.plate.say(`instrument : ${instrumentInfo(this.audio.instrument).name} · montrez vos mains`);
+        this.plate.say(`instrument : ${instrumentInfo(this.audio.instrument).name} · montre tes mains`);
       }
       this.loopDetect();
     } catch (err) {
@@ -276,7 +276,7 @@ class GesteLive {
       btn.textContent = 'réessayer';
       const msg =
         err?.name === 'NotAllowedError'
-          ? 'La caméra est bloquée : autorisez-la avec l\'icône de caméra dans la barre d\'adresse, puis réessayez.'
+          ? 'La caméra est bloquée : autorise-la avec l\'icône de caméra dans la barre d\'adresse, puis réessaie.'
           : `Impossible de démarrer : ${err?.message ?? err}`;
       $('intro-error').textContent = msg;
     }
@@ -367,12 +367,12 @@ class GesteLive {
 
   recordPose(label) {
     if (!this.started) {
-      $('learn-status').textContent = 'commencez d\'abord (bouton « commencer »)';
+      $('learn-status').textContent = 'commence d\'abord (bouton « jouer »)';
       return;
     }
     // Une seconde pour se mettre en place, puis 3 secondes d'enregistrement.
     this.learning = { label, from: performance.now() + 1000, until: performance.now() + 4000 };
-    $('learn-status').textContent = 'préparez la pose…';
+    $('learn-status').textContent = 'prépare le geste…';
     this.updateLearnCounts();
   }
 
@@ -466,7 +466,7 @@ class GesteLive {
     // Main gauche : roue d'instruments (poing tenu, rotation du poignet, main ouverte pour valider).
     const current = INSTRUMENTS.findIndex((i) => i.id === this.s.instrument);
     const wev = this.wheel.update(L, Math.max(0, current), t, R?.label === 'fist');
-    if (wev.type === 'opened') this.plate.say('roue : tournez le poignet, ouvrez la main');
+    if (wev.type === 'opened') this.plate.say('roue : tourne le poignet, ouvre la main');
     else if (wev.type === 'selected') {
       this.chordPauseUntil = t + 700;
       if (wev.index !== current) this.changeInstrument(INSTRUMENTS[wev.index].id);

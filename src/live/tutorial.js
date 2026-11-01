@@ -13,7 +13,7 @@ const R = (pose, x = 0.7, y = 0.6) => ({ pose, x, y });
 export const LESSONS = [
   {
     title: 'jouer un accord',
-    text: 'Main gauche : levez un doigt. L\'accord sonne tant que vous gardez la pose.',
+    text: 'Main gauche : lève un doigt. L\'accord sonne tant que tu gardes la pose.',
     frames: [
       { at: 0, left: L(P.fist) },
       { at: 0.3, left: L(P.one) },
@@ -23,7 +23,7 @@ export const LESSONS = [
   },
   {
     title: 'changer d\'accord',
-    text: 'Comptez 1, 2, 3, 4 doigts : chaque nombre est un accord de la tonalité. Main ouverte = V, cornes = VI.',
+    text: 'Compte 1, 2, 3, 4 doigts : chaque nombre est un accord de la tonalité. Main ouverte = V, cornes = VI.',
     frames: [
       { at: 0, left: L(P.one) },
       { at: 0.25, left: L(P.two) },
@@ -35,7 +35,7 @@ export const LESSONS = [
   },
   {
     title: 'enrichir l\'accord',
-    text: 'Gardez la pose et montez la main : la triade devient une 7e, une 9e, puis une 13e.',
+    text: 'Garde la pose et monte la main : la triade devient une 7e, une 9e, puis une 13e.',
     arrow: { x: 0.12, from: 0.8, to: 0.25 },
     frames: [
       { at: 0, left: L(P.one, 0.3, 0.8) },
@@ -46,7 +46,7 @@ export const LESSONS = [
   },
   {
     title: 'changer d\'instrument',
-    text: 'Main gauche : tenez le poing une demi-seconde, la roue apparaît. Tournez le poignet pour choisir, puis ouvrez la main pour valider.',
+    text: 'Main gauche : tiens le poing une demi-seconde, la roue apparaît. Tourne le poignet pour choisir, puis ouvre la main pour valider.',
     frames: [
       { at: 0, left: L(P.palm) },
       { at: 0.15, left: L(P.fist) },
@@ -59,7 +59,7 @@ export const LESSONS = [
   },
   {
     title: 'jouer la mélodie',
-    text: 'Main droite : pincez le pouce et l\'index (gardez les autres doigts levés). La hauteur de la main choisit la note.',
+    text: 'Main droite : pince le pouce et l\'index (garde les autres doigts levés). La hauteur de la main choisit la note.',
     arrow: { x: 0.9, from: 0.8, to: 0.3 },
     frames: [
       { at: 0, right: R(P.palm, 0.7, 0.75) },
@@ -72,7 +72,7 @@ export const LESSONS = [
   },
   {
     title: 'choisir un mode',
-    text: 'Main droite : poing, dos de la main vers la caméra. L\'arc apparaît : glissez, puis ouvrez la main paume vers la caméra.',
+    text: 'Main droite : poing, dos de la main vers la caméra. L\'arc apparaît : glisse, puis ouvre la main paume vers la caméra.',
     arrow: { y: 0.3, from: 0.55, to: 0.8, horizontal: true },
     frames: [
       { at: 0, right: R(P.palm, 0.55, 0.6) },
@@ -85,7 +85,7 @@ export const LESSONS = [
   },
   {
     title: 'lancer la batterie',
-    text: 'En mode batterie (touche 1 ou arc) : pincez pouce + index et tournez le poignet. Lâchez : le rythme continue.',
+    text: 'En mode batterie (touche 1 ou arc) : pince pouce + index et tourne le poignet. Lâche : le rythme continue.',
     frames: [
       { at: 0, right: R({ ...P.pinchIndex, rot: -35 }) },
       { at: 0.5, right: R({ ...P.pinchIndex, rot: 35 }) },
@@ -95,7 +95,7 @@ export const LESSONS = [
   },
   {
     title: 'silence',
-    text: 'Serrez bien les deux poings : tout se tait. Gardez-les fermées plus d\'une seconde pour tout arrêter.',
+    text: 'Serre bien les deux poings : tout se tait. Garde-les fermés plus d\'une seconde pour tout arrêter.',
     frames: [
       { at: 0, left: L(P.open), right: R(P.open) },
       { at: 0.35, left: L(P.fist), right: R(P.fist) },
@@ -156,7 +156,7 @@ export class Tutorial {
     this.els.step.textContent = `${this.index + 1} / ${LESSONS.length}`;
     this.els.title.textContent = lesson.title;
     this.els.text.textContent = lesson.text;
-    this.els.status.textContent = this.done.has(this.index) ? '✓ déjà réussi · essayez encore' : 'à vous : essayez devant la caméra';
+    this.els.status.textContent = this.done.has(this.index) ? '✓ déjà réussi · essaie encore' : 'à toi : essaie devant la caméra';
     this.els.status.className = 'tutor-status';
     this.els.prev.disabled = this.index === 0;
     this.els.next.textContent = this.index === LESSONS.length - 1 ? 'terminé' : 'suivant →';
