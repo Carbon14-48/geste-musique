@@ -1,5 +1,6 @@
 // Main droite : les 5 modes de l'arc. Un pincement choisit une piste (un doigt = une piste),
 // la rotation du poignet règle sa valeur, et la valeur reste quand on lâche (sauf fx, momentané).
+// Exception : la batterie n'utilise ni pincement ni rotation, voir plus bas.
 
 import { DRUM_FAMILIES, DRUM_LEVEL_NAMES, BASS_PARAMS } from './patterns.js';
 import { SCALE_STEPS, NOTES_FR } from './theory.js';

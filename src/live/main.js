@@ -1,4 +1,4 @@
-// Geste Live : main gauche = accords et roue d'instruments, main droite = arc de 5 modes
+// Geste Live : main gauche = accords et changement d'instrument, main droite = arc de 5 modes
 // (batterie, basse, mélodie, fx, sculpt). Poses reconnues par les règles ou par un modèle TensorFlow.js.
 
 import './live.css';
@@ -14,7 +14,7 @@ import { TakeRecorder } from './recorder.js';
 import { NOTES_FR, keyName } from './theory.js';
 import { INSTRUMENTS, SAMPLE_CREDIT, cycleInstrument, instrumentInfo } from './instruments.js';
 import { Tutorial } from './tutorial.js';
-import { InstrumentWheel } from './wheel.js';
+import { InstrumentSwitch } from './instrumentSwitch.js';
 import { MuteDetector } from './mute.js';
 import { TRAINABLE_POSES, hasSavedModel, hasPythonModel } from '../ml/poses.js';
 
@@ -67,8 +67,7 @@ class GesteLive {
     this.muted = false;
     this.mutedSince = 0;
     this.panicked = false;
-    this.wheel = new InstrumentWheel({ count: INSTRUMENTS.length });
-    this.chordPauseUntil = 0; // pas d'accord juste après avoir validé la roue (main ouverte = V)
+    this.instrumentSwitch = new InstrumentSwitch();
     this.learnSamples = []; // {label, x} enregistrés pour l'entraînement TensorFlow
     this.learning = null; // {label, until}
     this.modelSource = 'standard';
@@ -136,6 +135,8 @@ class GesteLive {
     fill($('rec-format'), [['wide', 'large'], ['vertical', 'vertical 720×1280'], ['both', 'les deux']], this.s.format);
     fill($('instrument'), INSTRUMENTS.map((i) => [i.id, i.name]), this.s.instrument);
     $('instrument').addEventListener('change', (e) => this.changeInstrument(e.target.value));
+    $('instrument-prev').addEventListener('click', () => this.changeInstrument(cycleInstrument(this.s.instrument, -1)));
+    $('instrument-next').addEventListener('click', () => this.changeInstrument(cycleInstrument(this.s.instrument, 1)));
     $('credit').textContent = SAMPLE_CREDIT;
     $('set-bpm').value = this.s.bpm;
     $('bpm-out').textContent = this.s.bpm;
@@ -236,7 +237,7 @@ class GesteLive {
     try {
       await this.audio.setInstrument(info.id);
       if (this.loadingInstrument !== info.id) return; // un autre choix est arrivé entre-temps
-      this.plate.say(`instrument : ${info.name}`);
+      this.plate.say(info.name, { big: true }); // l'accord tenu rejoue tout de suite avec le nouveau son
       this.stats.instrumentChanges++;
     } catch {
       this.plate.say(`${info.name} : échantillons indisponibles (connexion ?)`);
@@ -463,20 +464,13 @@ class GesteLive {
     const R = frame.hands.right;
     this.collectSample(frame, t);
 
-    // Main gauche : roue d'instruments (poing tenu, rotation du poignet, main ouverte pour valider).
-    const current = INSTRUMENTS.findIndex((i) => i.id === this.s.instrument);
-    const wev = this.wheel.update(L, Math.max(0, current), t, R?.label === 'fist');
-    if (wev.type === 'opened') this.plate.say('roue : tourne le poignet, ouvre la main');
-    else if (wev.type === 'selected') {
-      this.chordPauseUntil = t + 700;
-      if (wev.index !== current) this.changeInstrument(INSTRUMENTS[wev.index].id);
-      else this.plate.say(`instrument : ${INSTRUMENTS[wev.index].name}`);
-    }
+    // Main gauche : changer d'instrument (pouce + index = suivant, pouce + auriculaire = précédent).
+    const dir = this.instrumentSwitch.update(frame.events, t);
+    if (dir !== 0) this.changeInstrument(cycleInstrument(this.s.instrument, dir));
 
-    // Main gauche : accords (en pause pendant la roue).
-    const chordHand = this.wheel.open || t < this.chordPauseUntil ? null : L;
+    // Main gauche : accords.
     const prev = this.chordState;
-    this.chordState = this.chordHand.update(chordHand, this.key, L ? this.norm(L.height) : 0, t);
+    this.chordState = this.chordHand.update(L, this.key, L ? this.norm(L.height) : 0, t);
     this.audio.chord = this.chordHand.chord;
     const cs = this.chordState;
     if (cs && (!prev || prev.name !== cs.name)) {
@@ -496,8 +490,6 @@ class GesteLive {
         this.stats.mutes++;
         this.audio.setMuted(true);
         this.arc.reset();
-        this.wheel.reset();
-        this.wheel.armed = false;
         if (this.mode && this.pinch.finger !== null) this.modes[this.mode].release(this.pinch.finger);
         this.pinch.reset();
       } else if (!this.panicked && t - this.mutedSince > 1500) {
@@ -550,7 +542,6 @@ class GesteLive {
       mirror: this.s.mirror,
       scrim: this.s.scrim,
       enhance: this.s.enhance,
-      wheel: { open: this.wheel.open, hover: this.wheel.hover, anchor: this.wheel.anchor, items: INSTRUMENTS },
       modelSource: this.modelSource,
       started: this.started,
       hands: { left: L, right: R },

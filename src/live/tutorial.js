@@ -46,13 +46,11 @@ export const LESSONS = [
   },
   {
     title: 'changer d\'instrument',
-    text: 'Main gauche : tiens le poing une demi-seconde, la roue apparaît. Tourne le poignet pour choisir, puis ouvre la main pour valider.',
+    text: 'Main gauche : pouce + index tenus = instrument suivant. Pouce + auriculaire = précédent.',
     frames: [
       { at: 0, left: L(P.palm) },
-      { at: 0.15, left: L(P.fist) },
-      { at: 0.35, left: L({ ...P.fist, rot: -30 }) },
-      { at: 0.6, left: L({ ...P.fist, rot: 30 }) },
-      { at: 0.8, left: L({ ...P.palm, rot: 30 }) },
+      { at: 0.3, left: L(P.gun) },
+      { at: 0.7, left: L(P.gun) },
       { at: 1, left: L(P.palm) },
     ],
     check: (s, b) => s.instrumentChanges > b.instrumentChanges,

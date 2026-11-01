@@ -35,7 +35,11 @@
     </section>
 
     <nav id="rail" class="rail" hidden>
-      <label class="pill-select"><select id="instrument" aria-label="Instrument"></select></label>
+      <label class="pill-select">
+        <button id="instrument-prev" class="icon-btn" aria-label="Instrument précédent">◀</button>
+        <select id="instrument" aria-label="Instrument"></select>
+        <button id="instrument-next" class="icon-btn" aria-label="Instrument suivant">▶</button>
+      </label>
       <button id="btn-rec">● enregistrer</button>
       <select id="rec-format" aria-label="Format de la prise"></select>
       <button id="btn-settings">réglages</button>
@@ -112,7 +116,7 @@
         <li><b>doigts vers le bas</b> : l'accord descend d'un demi-ton</li>
         <li><b>hauteur</b> : bas = triade, plus haut = 7e, 9e, 13e (en direct)</li>
         <li><b>tourner le poignet</b> : filtre et longueur des notes</li>
-        <li><b>roue d'instruments</b> : tiens le poing gauche une demi-seconde, tourne le poignet pour choisir l'instrument, ouvre la main pour valider</li>
+        <li><b>changer d'instrument</b> : pouce + index tenu = instrument suivant ; pouce + auriculaire tenu = précédent (ou les boutons ◀ ▶ de la barre du bas)</li>
         <li>lâcher la pose arrête l'accord ; la refaire le rejoue</li>
       </ul>
       <h3>les deux mains</h3>

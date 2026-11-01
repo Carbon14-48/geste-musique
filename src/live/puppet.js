@@ -21,6 +21,8 @@ export const POSES = {
   horns: { curl: [1, 0, 1, 1, 0], spread: 0.6 },
   hornsThumb: { curl: [0, 0, 1, 1, 0], spread: 0.6 },
   like: { curl: [0, 1, 1, 1, 1], spread: 0, rot: -90 },
+  gun: { curl: [0, 0, 1, 1, 1], spread: 0.15 },
+  call: { curl: [0, 1, 1, 1, 0], spread: 0 },
   pinchIndex: { curl: [0, 0.25, 0, 0, 0], spread: 0.5, pinch: { finger: 0, amount: 1 } },
 };
 

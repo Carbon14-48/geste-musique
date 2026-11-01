@@ -218,6 +218,7 @@ describe('main animée du tutoriel', () => {
 });
 
 import { InstrumentWheel } from '../src/live/wheel.js';
+import { InstrumentSwitch } from '../src/live/instrumentSwitch.js';
 import { MuteDetector, isTightFist } from '../src/live/mute.js';
 import { HandTracker } from '../src/core/handTracker.js';
 import { openness } from '../src/core/rules.js';
@@ -236,6 +237,8 @@ describe('rôles des mains', () => {
   });
 });
 
+// InstrumentWheel n'est plus branchée dans Geste Live (remplacée par le geste pouce + index /
+// pouce + auriculaire, trop lent à l'usage), mais la classe reste testée pour ne rien casser.
 describe('roue d\'instruments', () => {
   const lh = (label, tilt = 0) => ({ label, tilt, palm: { x: 0.3, y: 0.5 } });
 
@@ -265,6 +268,55 @@ describe('roue d\'instruments', () => {
     w.update(lh('open'), 0, 10);
     expect(w.update(lh('fist'), 0, 20).type).toBe('opened');
     expect(w.update(null, 0, 1000).type).toBe('cancelled');
+  });
+});
+
+describe('changer d\'instrument (pouce + index / pouce + auriculaire)', () => {
+  it('pouce + index tenu = suivant, pouce + auriculaire tenu = précédent', () => {
+    const sw = new InstrumentSwitch();
+    expect(sw.update([{ type: 'pose_hold', label: 'gun', hand: 'left' }], 0)).toBe(1);
+    expect(sw.update([{ type: 'pose_hold', label: 'call', hand: 'left' }], 1000)).toBe(-1);
+  });
+
+  it('ignore la main droite, les autres poses, et une simple entrée sans tenue', () => {
+    const sw = new InstrumentSwitch();
+    expect(sw.update([{ type: 'pose_hold', label: 'gun', hand: 'right' }], 0)).toBe(0);
+    expect(sw.update([{ type: 'pose_hold', label: 'rock', hand: 'left' }], 0)).toBe(0);
+    expect(sw.update([{ type: 'pose_enter', label: 'gun', hand: 'left' }], 0)).toBe(0);
+  });
+
+  it('une pause empêche de défiler plusieurs instruments d\'un coup', () => {
+    const sw = new InstrumentSwitch({ cooldownMs: 800 });
+    expect(sw.update([{ type: 'pose_hold', label: 'gun', hand: 'left' }], 0)).toBe(1);
+    expect(sw.update([{ type: 'pose_hold', label: 'gun', hand: 'left' }], 300)).toBe(0);
+    expect(sw.update([{ type: 'pose_hold', label: 'gun', hand: 'left' }], 900)).toBe(1);
+  });
+
+  it('ne se déclenche jamais pendant une vraie séquence d\'accords (mains synthétiques, HandTracker réel)', () => {
+    const tracker = new HandTracker();
+    // 1, 2, 3, 4 doigts, main ouverte, cornes, cornes + pouce : tous les gestes d'accords à la suite.
+    const sequence = [
+      [D, U, D, D, D], // one
+      [D, U, U, D, D], // two / peace
+      [D, U, U, U, D], // three
+      [D, U, U, U, U], // four
+      [U, U, U, U, U], // open / palm
+      [D, U, D, D, U], // rock
+      [U, U, D, D, U], // hornsThumb
+    ];
+    const events = [];
+    let t = 0;
+    for (const states of sequence) {
+      for (let i = 0; i < 8; i++) {
+        // Petite variation d'angle pour imiter une tenue de main jamais parfaitement immobile.
+        const { world, image } = synthHand(states, { rotateDeg: (i - 4) });
+        const result = { landmarks: [image], worldLandmarks: [world], handedness: [[{ categoryName: 'Left', score: 1 }]] };
+        events.push(...tracker.update(result, t).events);
+        t += 33;
+      }
+    }
+    const badEvents = events.filter((e) => e.hand === 'left' && (e.label === 'gun' || e.label === 'call'));
+    expect(badEvents).toEqual([]);
   });
 });
 
@@ -486,7 +538,6 @@ describe('Plate.render (Geste Live) : le canvas se dessine sans erreur dans chaq
     modeState: null,
     pinchFinger: null,
     arc: { open: false, hover: null, anchor: { x: 0.7, y: 0.6 } },
-    wheel: { open: false, hover: 0, anchor: { x: 0.3, y: 0.6 }, items: INSTRUMENTS },
     step: 0,
     bar: 0,
     leftHeight: 0.5,
@@ -523,9 +574,10 @@ describe('Plate.render (Geste Live) : le canvas se dessine sans erreur dans chaq
     expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
   });
 
-  it('roue d\'instruments ouverte (main gauche)', () => {
+  it('bulle de changement d\'instrument (grande, via plate.say)', () => {
     const plate = new Plate();
-    const s = { ...baseState(), hands: { left: fakeHand('left'), right: null }, wheel: { open: true, hover: 2, anchor: { x: 0.3, y: 0.6 }, items: INSTRUMENTS } };
+    plate.say('Guitare', { big: true });
+    const s = { ...baseState(), hands: { left: fakeHand('left'), right: null } };
     expect(() => plate.render(fakeCtx(), 1280, 720, s)).not.toThrow();
   });
 

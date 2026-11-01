@@ -20,13 +20,13 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
   - dos de la main = mode parallèle ; doigts vers le bas = un demi-ton plus bas ;
   - hauteur de la main = triade, puis 7e, 9e et 13e ;
   - rotation du poignet = filtre ;
-  - **poing tenu ½ s = roue d'instruments** : on tourne le poignet pour choisir, puis on ouvre la main pour valider.
+  - **changer d'instrument** : pouce + index tenus ~0,5 s = suivant ; pouce + auriculaire = précédent (gestes libres, pas utilisés par les accords).
 - **Main droite** :
   - poing dos à la caméra → l'arc des modes apparaît ; on glisse, puis on ouvre la main pour choisir ;
   - pincer le pouce avec un doigt choisit une piste, et la rotation du poignet règle sa valeur ;
   - **mode batterie** : le nombre de doigts levés choisit directement le rythme (1 = base, 2 = groove, 3 = chargé, 4 = roulements), sans pincement ni rotation ; baisser la main garde le rythme en cours.
 - **Instruments enregistrés** : piano, guitares, violon, violoncelle, flûte, saxophone, clarinette, trompette, harpe, orgue, harmonium, xylophone, ou synthé.
-  - On les choisit avec la **roue de la main gauche**, dans la barre du bas, ou avec <kbd>←</kbd> <kbd>→</kbd>.
+  - On les choisit avec le **geste de la main gauche**, les boutons ◀ ▶ de la barre du bas, ou avec <kbd>←</kbd> <kbd>→</kbd>.
   - La mélodie de la main droite utilise le même instrument.
 - **Main droite = mélodie dès le départ** : pincer le pouce avec l'index, la hauteur de la main choisit la note.
 - **Deux poings bien serrés = silence**, après ¼ s. Une main à moitié fermée ne déclenche rien. Au-delà de 1,5 s, tout s'arrête.

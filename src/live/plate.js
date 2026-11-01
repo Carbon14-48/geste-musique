@@ -70,8 +70,8 @@ export class Plate {
     return this.fade[side];
   }
 
-  say(text, t = performance.now()) {
-    this.messages.push({ text, t });
+  say(text, { big = false } = {}) {
+    this.messages.push({ text, t: performance.now(), big });
     if (this.messages.length > 3) this.messages.shift();
   }
 
@@ -180,7 +180,7 @@ export class Plate {
     const rightBox = portrait
       ? { x: pad, y: h * 0.58, w: panelW, h: h * 0.42 - m - 40 }
       : { x: w - pad - panelW, y: m + 56, w: panelW, h: h - 2 * m - 110 };
-    const leftOn = this.updateFade('left', !!(S.hands?.left || S.chord || S.wheel?.open), dt);
+    const leftOn = this.updateFade('left', !!(S.hands?.left || S.chord), dt);
     const rightOn = this.updateFade('right', !!(S.hands?.right || S.arc?.open || (S.pinchFinger ?? null) !== null), dt);
     const modeColor = S.mode ? P.MODE_COLORS[S.mode] : P.ACCENT;
     if (S.started) {
@@ -208,18 +208,19 @@ export class Plate {
       if (hand) this.drawHand(ctx, hand, vr, role, role === 'right' ? S.pinchFinger : null);
     }
     if (S.arc?.open && S.hands?.right) this.drawArc(ctx, S.arc, S.hands.right, vr, Math.min(w, h));
-    if (S.wheel?.open && S.hands?.left) this.drawWheel(ctx, S.wheel, S.hands.left, vr, Math.min(w, h));
 
     // Messages éphémères, en petites bulles.
     const now = performance.now();
     this.messages = this.messages.filter((msg) => now - msg.t < 2200);
     this.messages.forEach((msg, i) => {
       const alpha = Math.min(1, (2200 - (now - msg.t)) / 400);
-      const y = h - m - 70 - (this.messages.length - 1 - i) * 36;
-      ctx.font = `500 13px ${SANS}`;
+      const size = msg.big ? 22 : 13;
+      const boxH = msg.big ? 52 : 32;
+      const y = h - m - 70 - (this.messages.length - 1 - i) * (boxH + 6);
+      ctx.font = `${msg.big ? 700 : 500} ${size}px ${SANS}`;
       const tw = ctx.measureText(msg.text).width;
-      pill(ctx, w / 2 - tw / 2 - 16, y - 20, tw + 32, 32, 'rgba(20, 13, 51, 0.92)', alpha);
-      label(ctx, msg.text, w / 2, y, { size: 13, align: 'center', color: `rgba(243, 241, 251, ${alpha})` });
+      pill(ctx, w / 2 - tw / 2 - 20, y - boxH / 2 - 6, tw + 40, boxH, msg.big ? P.ACCENT : 'rgba(20, 13, 51, 0.92)', alpha);
+      label(ctx, msg.text, w / 2, y, { size, align: 'center', weight: msg.big ? 700 : 500, color: msg.big ? `rgba(25, 5, 8, ${alpha})` : `rgba(243, 241, 251, ${alpha})` });
     });
 
     if (S.muted) {
@@ -287,7 +288,7 @@ export class Plate {
     }
     const dialY = ladderTop + 4 * (cellH + 6) + 34;
     if (dialY < b.y + b.h + 40) dial(ctx, b.x + 22, dialY, 18, S.leftRoll, 'filtre');
-    if (dialY + 30 < b.y + b.h + 40) label(ctx, 'poing tenu = roue d\'instruments', b.x, dialY + 36, { size: 12, color: P.DIM });
+    if (dialY + 30 < b.y + b.h + 40) label(ctx, 'pouce + index/auriculaire = instrument', b.x, dialY + 36, { size: 12, color: P.DIM });
   }
 
   drawRightPanel(ctx, b, S, portrait, modeColor) {
@@ -480,47 +481,6 @@ export class Plate {
       });
     }
     label(ctx, 'ouvrir = choisir · dos = annuler', x, y + 26, { size: 11, align: 'center', color: P.DIM });
-    ctx.restore();
-  }
-
-  /** Roue d'instruments autour de la main gauche : 7 instruments visibles, le survolé au centre. */
-  drawWheel(ctx, wheel, hand, vr, scale) {
-    const x = vr.x + wheel.anchor.x * vr.w;
-    const y = vr.y + wheel.anchor.y * vr.h;
-    const R = scale * 0.22;
-    const items = wheel.items;
-    const n = items.length;
-    const visible = 3; // de chaque côté
-    const span = 0.32; // radians par case
-    ctx.save();
-    ctx.fillStyle = 'rgba(11, 7, 32, 0.45)';
-    ctx.beginPath();
-    ctx.arc(x, y, R + 40, Math.PI, Math.PI * 2);
-    ctx.fill();
-    for (let k = -visible; k <= visible; k++) {
-      const i = (((wheel.hover + k) % n) + n) % n;
-      const am = -Math.PI / 2 + k * span;
-      const a0 = am - span / 2 + 0.02;
-      const a1 = am + span / 2 - 0.02;
-      const on = k === 0;
-      ctx.globalAlpha = 1 - Math.abs(k) * 0.22;
-      ctx.beginPath();
-      ctx.arc(x, y, R + 30, a0, a1);
-      ctx.arc(x, y, R - 26, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = on ? P.ACCENT : 'rgba(255,255,255,0.08)';
-      ctx.strokeStyle = on ? P.ACCENT : P.FAINT;
-      ctx.lineWidth = 1.5;
-      ctx.fill();
-      ctx.stroke();
-      ctx.save();
-      ctx.translate(x + Math.cos(am) * (R + 2), y + Math.sin(am) * (R + 2));
-      ctx.rotate(am + Math.PI / 2);
-      label(ctx, items[i].name, 0, 4, { size: on ? 13 : 11, align: 'center', color: on ? '#190508' : P.INK, weight: on ? 700 : 500 });
-      ctx.restore();
-    }
-    ctx.globalAlpha = 1;
-    label(ctx, 'tourne le poignet · ouvre la main = choisir', x, y + 28, { size: 12, align: 'center', color: P.INK });
     ctx.restore();
   }
 }
