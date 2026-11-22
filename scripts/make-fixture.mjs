@@ -1,7 +1,7 @@
 // Génère shared/normalize_fixture.json : des entrées et les sorties attendues de la normalisation JS.
 // Les tests Python (training/test_common.py) vérifient que training/common.py donne exactement la même chose.
 import { writeFileSync } from 'node:fs';
-import { normalizePose, sequenceFeatures } from '../src/core/landmarks.js';
+import { handFeatures2d, normalizePose, sequenceFeatures } from '../src/core/landmarks.js';
 import { synthHand } from '../tests/helpers/synthHand.js';
 
 let seed = 42;
@@ -17,6 +17,14 @@ const cases = shapes.flatMap((s, i) =>
   }),
 );
 
+// Entrée du réseau HandNet (points image 2D, avec correction d'aspect).
+const cases2d = shapes.flatMap((s, i) =>
+  [['Left', 0.5625], ['Right', 1], ['Unknown', 0.75]].map(([handedness, aspect]) => {
+    const image = jitter(synthHand(s, { rotateDeg: i * 25 }).image, 0.003);
+    return { handedness, aspect, image: arr(image), features: handFeatures2d(image, handedness, aspect) };
+  }),
+);
+
 const frames = Array.from({ length: 6 }, (_, i) => {
   if (i === 3) return null;
   const h = synthHand(['up', 'up', 'up', 'up', 'up'], { rotateDeg: i * 5 });
@@ -29,5 +37,5 @@ const sequence = {
   features,
 };
 
-writeFileSync(new URL('../shared/normalize_fixture.json', import.meta.url), JSON.stringify({ cases, sequence }, null, 1));
-console.log(`✔ ${cases.length} poses et 1 séquence écrites dans shared/normalize_fixture.json`);
+writeFileSync(new URL('../shared/normalize_fixture.json', import.meta.url), JSON.stringify({ cases, cases2d, sequence }, null, 1));
+console.log(`✔ ${cases.length} poses, ${cases2d.length} mains 2D et 1 séquence écrites dans shared/normalize_fixture.json`);

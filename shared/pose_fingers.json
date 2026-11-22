@@ -1,0 +1,30 @@
+{
+  "_doc": "Doigts levés pour chaque pose (pouce, index, majeur, annulaire, auriculaire). Source unique lue par training/common.py et src/ml/poses.js. null = pas de cible doigts (masquée à l'entraînement). raw = surcharges par classe HaGRID brute.",
+  "poses": {
+    "fist": "00000",
+    "one": "01000",
+    "two": "01100",
+    "peace": "01100",
+    "three": "01110",
+    "four": "01111",
+    "palm": "11111",
+    "open": "11111",
+    "like": "10000",
+    "dislike": "10000",
+    "rock": "01001",
+    "hornsThumb": "11001",
+    "call": "10001",
+    "gun": "11000",
+    "ok": "00111",
+    "claw": null,
+    "other": null,
+    "none": null
+  },
+  "raw": {
+    "three2": "11100",
+    "three_gun": "11100",
+    "three3": "01101",
+    "middle_finger": "00100",
+    "little_finger": "00001"
+  }
+}
