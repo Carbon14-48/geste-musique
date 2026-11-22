@@ -32,6 +32,8 @@ export const CONNECTIONS = [
 ];
 
 export const POSE_DIM = 63;
+/** Entrée du réseau HandNet : 21 points image (x, y). */
+export const HAND2D_DIM = 42;
 export const FRAME_DIM = 67;
 
 export function sub(a, b) {
@@ -95,6 +97,32 @@ export function normalizePose(world, handednessLabel) {
     out[i * 3] = ((p.x - w.x) / s) * flip;
     out[i * 3 + 1] = (p.y - w.y) / s;
     out[i * 3 + 2] = ((p.z ?? 0) - (w.z ?? 0)) / s;
+  }
+  return out;
+}
+
+/**
+ * Entrée du réseau HandNet (42 valeurs) : les 21 points **image** en 2D.
+ * On n'utilise que (x, y) parce que c'est ce que fournit HaGRIDv2 (≈ 1 million de mains annotées
+ * par MediaPipe) : mêmes caractéristiques à l'entraînement et dans le navigateur.
+ * - pixels carrés : y multiplié par hauteur/largeur de l'image (aspect)
+ * - translation : poignet à l'origine ; échelle : divisé par |poignet -> base du majeur|
+ * - miroir : x inversé pour une main « Left » (même convention que normalizePose)
+ * Pas de rotation : « doigts vers le haut » et « doigts vers le bas » doivent rester distincts.
+ * @param {{x:number,y:number}[]} image points image normalisés (0..1)
+ * @param {string} handednessLabel "Left", "Right" (ou autre : pas de miroir)
+ * @param {number} aspect hauteur / largeur de l'image
+ */
+export function handFeatures2d(image, handednessLabel, aspect = 1) {
+  const w = image[LM.WRIST];
+  const m = image[LM.MIDDLE_MCP];
+  let s = Math.hypot(m.x - w.x, (m.y - w.y) * aspect);
+  if (s < 1e-6) s = 1;
+  const flip = handednessLabel === 'Left' ? -1 : 1;
+  const out = new Array(HAND2D_DIM);
+  for (let i = 0; i < 21; i++) {
+    out[i * 2] = ((image[i].x - w.x) / s) * flip;
+    out[i * 2 + 1] = ((image[i].y - w.y) * aspect) / s;
   }
   return out;
 }

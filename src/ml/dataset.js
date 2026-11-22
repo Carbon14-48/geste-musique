@@ -12,9 +12,11 @@ export class DatasetRecorder {
     this.sequences = [];
   }
 
-  addPose(label, hand) {
+  /** @param {{palm?:boolean, down?:boolean}} extra côté et direction de la main, si connus */
+  addPose(label, hand, extra = {}) {
     this.poses.push({
       label,
+      ...extra,
       subject: this.subject,
       handedness: hand.handedness,
       world: pack(hand.world),

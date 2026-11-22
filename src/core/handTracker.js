@@ -1,7 +1,7 @@
 // Transforme les résultats bruts de MediaPipe en états de main exploitables par les modes :
 // rôle (gauche/droite), points lissés, pose stable, comptage, mouvements, valeurs continues.
 
-import { LM, dist, dist2d, normalizePose } from './landmarks.js';
+import { LM, dist, dist2d, handFeatures2d, normalizePose } from './landmarks.js';
 import { LandmarkSmoother } from './oneEuro.js';
 import { classifyPose, openness, palmFacingCamera, handPointsDown, DEFAULT_THRESHOLDS } from './rules.js';
 import { GestureStabilizer, Cooldown } from './trigger.js';
@@ -24,12 +24,15 @@ function makeSlot() {
 
 export class HandTracker {
   constructor() {
+    this.aspect = 720 / 1280; // hauteur / largeur de la vidéo (réglé par l'application)
     this.mirror = true; // affichage « miroir » : la main droite apparaît à droite
     this.swapHands = false;
     this.invertPalm = false; // réglage si la détection paume / dos est inversée sur une caméra
     this.thresholds = { ...DEFAULT_THRESHOLDS };
-    this.poseModel = null; // classifieur TF.js optionnel {predict(features) -> {label, confidence}}
-    this.poseModelMinConfidence = 0.8;
+    // Réseau TF.js HandNet {predict(features) -> {label, confidence, fingers, count, palmFacing, pointsDown}}.
+    // Un ancien classifieur qui ne renvoie que {label, confidence} marche aussi (doigts par les règles).
+    this.poseModel = null;
+    this.poseModelMinConfidence = 0.6;
     this.slots = { left: makeSlot(), right: makeSlot() };
     this.clapCd = new Cooldown(250);
     this.prevHandsDist = null;
@@ -140,17 +143,36 @@ export class HandTracker {
       y: palmIdx.reduce((s, i) => s + screen[i].y, 0) / palmIdx.length,
     };
     const size = dist2d(image[LM.WRIST], image[LM.MIDDLE_MCP]);
+    // Mesures continues (pincement, écart, courbures) : toujours géométriques, ce sont des valeurs, pas des décisions.
     const pose = classifyPose(world, image, this.thresholds);
-    let rawLabel = pose.label;
-    let modelLabel = null;
     const features = normalizePose(world, handedness);
+    const features2d = handFeatures2d(image, handedness, this.aspect); // entrée du réseau HandNet
+
+    // Reconnaissance : le réseau HandNet décide tout (pose, doigts, comptage, paume/dos, doigts en bas).
+    // Les règles ne servent que si aucun modèle n'est chargé.
+    let source = 'rules';
+    let rawLabel = pose.label;
+    let fingers = pose.fingers;
+    let rawCount = pose.count;
+    let palmFacing = palmFacingCamera(image, role) !== this.invertPalm;
+    let pointsDown = handPointsDown(image);
+    let ai = null;
     if (this.poseModel) {
-      const pred = this.poseModel.predict(features);
-      if (pred && pred.confidence >= this.poseModelMinConfidence) {
-        modelLabel = pred;
-        rawLabel = pred.label;
+      ai = this.poseModel.predict(this.poseModel.input2d ? features2d : features);
+      if (ai) {
+        source = 'ai';
+        // Peu sûr de lui : « autre » plutôt qu'un mauvais accord.
+        rawLabel = ai.confidence >= this.poseModelMinConfidence ? ai.label : 'other';
+        if (ai.fingers) {
+          fingers = ai.fingers;
+          rawCount = ai.count;
+        }
+        // Sorties que le modèle n'a pas apprises (ex. paume/dos avant l'affinage) : undefined -> on garde la mesure.
+        if (ai.palmFacing !== undefined) palmFacing = ai.palmFacing !== this.invertPalm;
+        if (ai.pointsDown !== undefined) pointsDown = ai.pointsDown;
       }
     }
+    const modelLabel = ai && ai.confidence >= this.poseModelMinConfidence ? ai : null;
     // Angle de la ligne poignet -> base du majeur par rapport à la verticale (degrés, écran).
     const w = screen[LM.WRIST];
     const m = screen[LM.MIDDLE_MCP];
@@ -170,11 +192,14 @@ export class HandTracker {
       palm,
       size,
       features,
+      features2d,
       rawLabel,
       rulesLabel: pose.label,
       modelLabel,
-      rawCount: pose.count,
-      fingers: pose.fingers,
+      source, // 'ai' (HandNet) ou 'rules' (aucun modèle chargé)
+      ai, // sorties complètes du réseau (confiance, probabilités…) ou null
+      rawCount,
+      fingers,
       fingerStates: pose.states,
       bends: pose.bends,
       pinch: pose.pinch,
@@ -186,8 +211,8 @@ export class HandTracker {
       // Rotation du poignet ramenée dans [0, 1] (-50° -> 0, 0° -> 0,5, +50° -> 1).
       roll: Math.max(0, Math.min(1, 0.5 + tilt / 100)),
       pinches,
-      pointsDown: handPointsDown(image),
-      palmFacing: palmFacingCamera(image, role) !== this.invertPalm,
+      pointsDown,
+      palmFacing,
       label: 'none',
       count: null,
       velocity: { x: 0, y: 0, speed: 0 },
