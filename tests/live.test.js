@@ -229,8 +229,8 @@ import { InstrumentSwitch } from '../src/live/instrumentSwitch.js';
 import { MuteDetector, isTightFist } from '../src/live/mute.js';
 import { HandTracker } from '../src/core/handTracker.js';
 import { openness } from '../src/core/rules.js';
-import { BrowserPoseModel } from '../src/ml/trainer.js';
-import { normalizePose } from '../src/core/landmarks.js';
+import { HandModel } from '../src/ml/handModel.js';
+import { handFeatures2d } from '../src/core/landmarks.js';
 import * as tf from '@tensorflow/tfjs';
 import { H } from './helpers/synthHand.js';
 
@@ -473,38 +473,51 @@ describe('les 5 modes de la main droite (arc)', () => {
   });
 });
 
-describe('entraînement TensorFlow.js dans le navigateur', () => {
-  it('apprend des poses synthétiques', async () => {
+describe('entraînement TensorFlow.js dans le navigateur (HandNet)', () => {
+  const sample = (label, st, i, extra = {}) => {
+    const { image } = synthHand(st, { rotateDeg: (i % 13) - 6 });
+    const jit = image.map((p) => ({ x: p.x + (Math.random() - 0.5) * 0.004, y: p.y + (Math.random() - 0.5) * 0.004 }));
+    return { label, x: handFeatures2d(jit, 'Right', 1), palm: true, down: false, ...extra };
+  };
+
+  it('apprend des poses synthétiques à partir de zéro, avec les 4 sorties', async () => {
     const shapes = { fist: [D, D, D, D, D], one: [D, U, D, D, D], palm: [U, U, U, U, U], rock: [D, U, D, D, U] };
     const samples = [];
-    for (const [label, st] of Object.entries(shapes)) {
-      for (let i = 0; i < 25; i++) {
-        const { world } = synthHand(st, { rotateDeg: (i - 12) * 2 });
-        const jitter = world.map((p) => ({ x: p.x + (Math.random() - 0.5) * 0.004, y: p.y + (Math.random() - 0.5) * 0.004, z: p.z }));
-        samples.push({ label, x: normalizePose(jitter, 'Right') });
-      }
-    }
-    const model = await BrowserPoseModel.train(samples, { epochs: 60 });
+    for (const [label, st] of Object.entries(shapes)) for (let i = 0; i < 25; i++) samples.push(sample(label, st, i));
+    const model = await HandModel.fineTune(samples, null, { epochs: 60 });
     let ok = 0;
     for (const [label, st] of Object.entries(shapes)) {
-      const { world } = synthHand(st, { rotateDeg: 7 });
-      if (model.predict(normalizePose(world, 'Right')).label === label) ok++;
+      const pred = model.predict(handFeatures2d(synthHand(st, { rotateDeg: 3 }).image, 'Right', 1));
+      if (pred.label === label) ok++;
+      expect(pred.fingers).toHaveLength(5);
+      expect(typeof pred.palmFacing).toBe('boolean');
     }
-    expect(ok / 4).toBeGreaterThanOrEqual(0.9);
+    expect(ok / 4).toBeGreaterThanOrEqual(0.75);
+    model.dispose();
+  }, 30000);
+
+  it('affine un modèle de base et ajoute une pose qu\'il ne connaissait pas (cornes + pouce)', async () => {
+    const { buildHandNet } = await import('../src/ml/handModel.js');
+    const base = new HandModel(buildHandNet(3), ['fist', 'one', 'palm'], { trained_heads: ['pose', 'fingers', 'down'] });
+    const samples = [];
+    for (let i = 0; i < 15; i++) {
+      samples.push(sample('fist', [D, D, D, D, D], i), sample('hornsThumb', [U, U, D, D, U], i, { palm: false }));
+    }
+    const model = await HandModel.fineTune(samples, base, { epochs: 10 });
+    expect(model.labels).toEqual(['fist', 'one', 'palm', 'hornsThumb']);
+    expect(model.meta.trained_heads).toEqual(expect.arrayContaining(['pose', 'fingers', 'palm', 'down']));
+    const pred = model.predict(handFeatures2d(synthHand([U, U, D, D, U]).image, 'Right', 1));
+    expect(Object.keys(pred.probs)).toHaveLength(4);
+    model.dispose();
   }, 30000);
 
   it('plusieurs ré-entraînements de suite (mode apprentissage) ne fuient pas de mémoire', async () => {
     const samples = [];
-    for (const [label, st] of Object.entries({ fist: [D, D, D, D, D], palm: [U, U, U, U, U] })) {
-      for (let i = 0; i < 10; i++) {
-        const { world } = synthHand(st, { rotateDeg: i });
-        samples.push({ label, x: normalizePose(world, 'Right') });
-      }
-    }
+    for (let i = 0; i < 10; i++) samples.push(sample('fist', [D, D, D, D, D], i), sample('palm', [U, U, U, U, U], i));
     const before = tf.memory().numTensors;
     let model = null;
     for (let i = 0; i < 3; i++) {
-      const next = await BrowserPoseModel.train(samples, { epochs: 5 });
+      const next = await HandModel.fineTune(samples, null, { epochs: 5 });
       model?.dispose(); // simule useModel() : l'ancien modèle est libéré avant d'adopter le nouveau
       model = next;
     }

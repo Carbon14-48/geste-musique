@@ -16,6 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 WEB_MODELS = ROOT / "public" / "models"
 POSE_DIM = 63
+HAND2D_DIM = 42  # entrée du réseau HandNet (handFeatures2d)
 FRAME_DIM = 67
 SEQ_STEPS = 24
 
@@ -38,8 +39,9 @@ HAGRID_MAP = {
     "three2": "three",
     "four": "four",
     "palm": "palm",
-    "stop": "palm",
-    "stop_inverted": "palm",
+    # Mesuré sur les données : dans « stop » le pouce est replié (01111) = nos « 4 doigts ».
+    "stop": "four",
+    "stop_inverted": "four",
     "like": "like",
     "dislike": "dislike",
     "rock": "rock",
@@ -49,6 +51,99 @@ HAGRID_MAP = {
     "thumb_index2": "gun",
     "no_gesture": "none",
 }
+
+# --------------------------------------------------------------------------------------------
+# HaGRIDv2 (annotations avec points MediaPipe 2D) -> réseau HandNet
+# --------------------------------------------------------------------------------------------
+
+# Correspondance vérifiée sur les données (doigts levés mesurés classe par classe sur le jeu de test).
+HAGRID_V2_MAP = {
+    "fist": "fist",
+    "one": "one",
+    "mute": "one",  # index levé devant la bouche
+    "two_up": "two",
+    "two_up_inverted": "two",
+    "peace": "peace",
+    "peace_inverted": "peace",
+    "three": "three",  # 01110
+    "three2": "three",  # 11100
+    "three_gun": "three",  # 11100
+    "four": "four",
+    "stop": "four",  # 01111 : pouce replié
+    "stop_inverted": "four",
+    "palm": "palm",  # 11111
+    "like": "like",
+    "dislike": "dislike",
+    "rock": "rock",
+    "call": "call",
+    "ok": "ok",
+    "thumb_index": "gun",
+    "thumb_index2": "gun",
+    "take_picture": "gun",  # pouce + index sur chaque main
+    # Exemples négatifs : une main qui ne fait aucun accord.
+    "three3": "other",
+    "middle_finger": "other",
+    "little_finger": "other",
+    "grip": "other",
+    "grabbing": "other",
+    "point": "other",
+    "no_gesture": "other",
+}
+
+# Doigts vers le bas : les classes « _inverted ». Orientation libre (cible masquée) pour celles-ci :
+DOWN_UNKNOWN = {"like", "dislike", "call", "fist", "grip", "grabbing", "point", "no_gesture", "mute"}
+
+FINGER_TABLE = json.loads((ROOT / "shared" / "pose_fingers.json").read_text(encoding="utf-8"))
+HEADS = ["pose", "fingers", "palm", "down"]
+
+
+def fingers_for(label: str, raw: str | None = None) -> np.ndarray | None:
+    """Doigts levés (5,) d'une pose, ou None si inconnus. Même table que src/ml/poses.js."""
+    bits = FINGER_TABLE["raw"].get(raw) if raw else None
+    if bits is None:
+        bits = FINGER_TABLE["poses"].get(label)
+    return None if bits is None else np.array([b == "1" for b in bits], dtype=np.float32)
+
+
+def down_for(raw: str) -> float | None:
+    """Cible « doigts vers le bas » d'une classe HaGRID brute (None = inconnue)."""
+    if raw in DOWN_UNKNOWN:
+        return None
+    return 1.0 if raw.endswith("_inverted") else 0.0
+
+
+def hand_features_2d(image: np.ndarray, handedness: str, aspect: float = 1.0) -> np.ndarray:
+    """(42,) : miroir exact de handFeatures2d (src/core/landmarks.js).
+    image : (21, 2+) points image normalisés ; aspect = hauteur / largeur de l'image."""
+    p = np.asarray(image, dtype=np.float64)[:, :2].copy()
+    p[:, 1] *= aspect
+    rel = p - p[WRIST]
+    s = float(np.hypot(*(p[MIDDLE_MCP] - p[WRIST])))
+    if s < 1e-6:
+        s = 1.0
+    rel = rel / s
+    if handedness == "Left":
+        rel[:, 0] = -rel[:, 0]
+    return rel.reshape(-1)
+
+
+def augment_2d(image: np.ndarray, rng: np.random.Generator, rot_deg: float = 20, noise: float = 0.03) -> np.ndarray:
+    """Augmentation des points 2D (avant hand_features_2d) : rotation dans le plan, étirement
+    d'aspect ±15 % (taille d'image inconnue), bruit, et « doigt fantôme » (occlusion)."""
+    p = np.asarray(image, dtype=np.float64)[:, :2].copy()
+    c = p[WRIST].copy()
+    p -= c
+    size = max(float(np.hypot(*p[MIDDLE_MCP])), 1e-6)
+    a = np.deg2rad(rng.uniform(-rot_deg, rot_deg))
+    rot = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
+    p = p @ rot.T
+    p[:, 1] *= rng.uniform(0.85, 1.15)
+    p += rng.normal(0, noise * size, p.shape)
+    if rng.random() < 0.1:
+        chain = FINGER_CHAINS[rng.integers(0, 5)]
+        p[chain[1:]] += rng.normal(0, 0.15 * size, (len(chain) - 1, 2))
+    return p + c
+
 
 # Classes Jester -> mouvements de Geste Musique.
 JESTER_MAP = {

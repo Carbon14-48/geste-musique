@@ -1,8 +1,8 @@
 # 🖐 Geste Musique
 
 **Jouer de la musique avec les mains devant une webcam.** Le projet tourne entièrement dans le navigateur :
-MediaPipe repère les 21 points de chaque main, des règles géométriques ou des modèles TensorFlow.js
-reconnaissent les gestes, et Tone.js produit le son. Le projet peut aussi piloter un logiciel de musique en MIDI.
+MediaPipe repère les 21 points de chaque main, **HandNet**, un réseau TensorFlow entraîné sur ≈ 350 000 mains
+(HaGRIDv2) puis affiné sur vos mains, reconnaît les gestes, et Tone.js produit le son. Le projet peut aussi piloter un logiciel de musique en MIDI.
 
 Le projet suit le cahier des charges [`docs/catalogue-gestes-geste-musique.pdf`](docs/catalogue-gestes-geste-musique.pdf).
 L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md).
@@ -30,10 +30,10 @@ L'analyse et les choix techniques sont dans [`docs/analyse.md`](docs/analyse.md)
   - La mélodie de la main droite utilise le même instrument.
 - **Main droite = mélodie dès le départ** : pincer le pouce avec l'index, la hauteur de la main choisit la note.
 - **Deux poings bien serrés = silence**, après ¼ s. Une main à moitié fermée ne déclenche rien. Au-delà de 1,5 s, tout s'arrête.
-- **TensorFlow.js** : bouton *apprendre* dans la barre du bas.
-  - Un petit réseau s'entraîne dans la page, sur vos propres mains.
-  - Il est sauvegardé dans le navigateur.
-  - Sans lui, le modèle Python de `public/models/pose/` est utilisé s'il existe, sinon les règles géométriques.
+- **IA (TensorFlow)** : le réseau **HandNet** (`public/models/hand/`) décide tout : pose, doigts levés, comptage, paume/dos, doigts vers le bas.
+  - Pré-entraîné en Python sur HaGRIDv2, testé sur des personnes jamais vues (voir `public/models/hand/metrics.json`).
+  - Bouton *apprendre* : TensorFlow.js l'affine dans la page sur vos propres mains (sauvegardé dans le navigateur).
+  - L'étiquette « IA · pose · confiance » s'affiche sous chaque main. Sans modèle, l'application retombe sur les règles géométriques.
 - **Affichage** : seul le panneau de la main active s'affiche. L'image de la caméra est en 720p, éclaircie par un filtre CSS (réglage *améliorer l'image*).
 - **Tutoriel « comment jouer »** à droite : 8 leçons avec des mains animées. Chaque leçon se valide toute seule quand le geste est réussi devant la caméra (touche <kbd>H</kbd>).
 - **Enregistrement** d'une prise vidéo + son, en format large ou vertical 720×1280, entièrement dans le navigateur.
@@ -54,7 +54,7 @@ Placez-vous à 50–80 cm de la caméra, bien éclairé de face.
 Autres commandes :
 
 ```bash
-npm test           # 88 tests unitaires (théorie musicale, arc, pincements, instruments, tutoriel, modes…)
+npm test           # tests unitaires (HandNet, théorie musicale, arc, pincements, instruments, tutoriel, modes…)
 npm run build      # version statique dans dist/ (GitHub Pages, Netlify…)
 ```
 
@@ -109,7 +109,8 @@ npm run build      # version statique dans dist/ (GitHub Pages, Netlify…)
 ```
 caméra ─► MediaPipe Hand Landmarker (src/core/detector.js)
        ─► lissage One Euro + rôles gauche/droite (src/core/handTracker.js)
-       ─► poses : règles (src/core/rules.js) ou modèle TF.js A (src/ml/models.js)
+       ─► HandNet TF.js : pose + doigts + paume/dos + doigts en bas (src/ml/handModel.js)
+          (règles src/core/rules.js seulement sans modèle)
        ─► mouvements : détecteurs (src/core/motion.js) ou modèle TF.js B
        ─► déclencheurs stables (src/core/trigger.js)
        ─► gestes globaux (src/modes/global.js) ─► mode courant (src/modes/*.js)
@@ -129,22 +130,17 @@ caméra ─► MediaPipe Hand Landmarker (src/core/detector.js)
 
 ## Entraîner les modèles TensorFlow
 
-Tout est décrit dans [`training/README.md`](training/README.md), en résumé :
+Tout est décrit dans [`training/README.md`](training/README.md). Pour HandNet (≈ 10 min sur un PC, sans GPU) :
 
-1. **Données** :
-   - [HaGRID](https://github.com/hukenovs/hagrid) pour les poses ;
-   - Jester ou IPN Hand pour les mouvements ;
-   - surtout **vos propres données**, enregistrées dans l'onglet *Données* de l'application.
-2. **Où** : [Google Colab](training/geste_musique_colab.ipynb) (GPU gratuit) ou un PC (CPU suffisant pour les poses).
-3. **Comment** :
+```bash
+cd training && uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+curl -LO https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip
+unzip annotations.zip -d data/hagrid_v2
+.venv/bin/python extract_hagrid_v2.py --annotations data/hagrid_v2/annotations --out data/hagrid_v2.npz
+.venv/bin/python train_hand.py --npz data/hagrid_v2.npz      # écrit public/models/hand/
+```
 
-   ```bash
-   cd training && pip install -r requirements.txt     # Python 3.10–3.12
-   python extract_hagrid.py --images … --annotations … --out data/hagrid.npz
-   python train_pose.py --npz data/hagrid.npz --finetune-json data/mes_donnees.json
-   ```
-
-4. Les modèles sont écrits dans `public/models/pose/` et `public/models/dynamic/`. L'application les charge toute seule au démarrage.
+Également possible sur [Google Colab](training/geste_musique_colab.ipynb).
 
 ## Limites connues
 - Si une main est de profil ou si des doigts sont cachés, le comptage se trompe. Quand les mains se croisent, la gauche et la droite peuvent s'inverser. Si une caméra inverse toujours les deux mains, l'option *Inverser main gauche / droite* est dans les Réglages.

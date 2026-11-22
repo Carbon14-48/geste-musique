@@ -408,6 +408,30 @@ a.link {
   gap: 8px;
 }
 
+.learn-variant {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.learn-variant button {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--faint);
+  border-radius: 999px;
+  color: var(--dim);
+  padding: 8px 10px;
+  min-height: 36px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.learn-variant button.on {
+  border-color: var(--accent);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .learn-actions button:first-child {
   background: var(--accent);
   color: var(--accent-text);

@@ -1,0 +1,33 @@
+{
+  "labels": [
+    "call",
+    "dislike",
+    "fist",
+    "four",
+    "gun",
+    "like",
+    "ok",
+    "one",
+    "other",
+    "palm",
+    "peace",
+    "rock",
+    "three",
+    "two"
+  ],
+  "input": "handFeatures2d (42)",
+  "heads": [
+    "pose",
+    "fingers",
+    "palm",
+    "down"
+  ],
+  "trained_heads": [
+    "pose",
+    "fingers",
+    "down"
+  ],
+  "val_accuracy": 0.9872440651089035,
+  "test_accuracy": 0.9877931034482759,
+  "train_hands": 348000
+}

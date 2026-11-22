@@ -83,7 +83,7 @@
       <p class="credit"><span id="credit"></span> · <a class="link" href="https://github.com/nbrosowsky/tonejs-instruments" target="_blank" rel="noopener">source</a></p>
       <details class="advanced">
         <summary>infos avancées</summary>
-        <p class="small">reconnaissance : <span id="learn-source">standard</span></p>
+        <p class="small">reconnaissance : <span id="learn-source">simple</span></p>
       </details>
     </aside>
 
@@ -91,13 +91,23 @@
       <header><h2>apprendre mes gestes</h2><button data-close aria-label="Fermer">×</button></header>
       <p class="small">Montre-moi tes gestes : je m'adapte à tes mains. Rien ne quitte ton ordinateur.</p>
       <ol class="learn-steps">
-        <li>1. choisis un geste ci-dessous</li>
-        <li>2. montre-le avec la <b>main gauche</b> pendant 3 secondes, en le bougeant un peu</li>
-        <li>3. je m'adapte</li>
+        <li>1. choisis comment tu montres ta main (paume ou dos, doigts en haut ou en bas)</li>
+        <li>2. choisis un geste et montre-le pendant 3 secondes, en le bougeant un peu</li>
+        <li>3. idéalement : chaque geste côté paume <b>et</b> côté dos</li>
+        <li>4. je m'adapte à tes mains</li>
       </ol>
+      <div class="learn-variant" role="group" aria-label="Côté de la main">
+        <button data-palm="1" class="on">paume</button>
+        <button data-palm="0">dos</button>
+      </div>
+      <div class="learn-variant" role="group" aria-label="Direction des doigts">
+        <button data-down="0" class="on">doigts en haut</button>
+        <button data-down="1">doigts en bas</button>
+      </div>
       <div id="learn-poses" class="learn-poses"></div>
       <div class="learn-actions">
         <button id="learn-train">je m'adapte</button>
+        <button id="learn-export">exporter</button>
         <button id="learn-reset">effacer</button>
       </div>
       <progress id="learn-progress" max="1" value="0" hidden></progress>

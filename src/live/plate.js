@@ -2,6 +2,7 @@
 // ce qui permet d'enregistrer exactement ce qu'on voit, en large ou en vertical.
 
 import { CONNECTIONS, LM } from '../core/landmarks.js';
+import { POSE_NAMES } from '../core/rules.js';
 import { drumBar, DRUM_FAMILIES, DRUM_LEVEL_NAMES } from './patterns.js';
 import { ARC_MODES, ARC_NAMES } from './arc.js';
 import { SPICE_NAMES } from './theory.js';
@@ -445,6 +446,13 @@ export class Plate {
       ctx.beginPath();
       ctx.arc(cx, cy, 14, 0, Math.PI * 2);
       ctx.stroke();
+    }
+    // Ce que l'IA voit : pose reconnue et confiance, sous le poignet.
+    if (hand.source === 'ai' && hand.ai) {
+      const name = POSE_NAMES[hand.rawLabel] ?? hand.rawLabel;
+      label(ctx, `IA · ${name} ${Math.round(hand.ai.confidence * 100)} %`, wrist.x, wrist.y + 26, {
+        size: 12, align: 'center', color: P.INK, weight: 700,
+      });
     }
     ctx.restore();
   }

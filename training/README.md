@@ -1,16 +1,64 @@
 # Entraînement des modèles TensorFlow
 
 On n'entraîne **jamais** le détecteur de mains : MediaPipe Hand Landmarker s'en charge très bien.
-On entraîne seulement deux **petits classifieurs** sur les 21 points qu'il fournit :
+On entraîne de **petits réseaux** sur les 21 points qu'il fournit.
+
+## HandNet : le réseau principal (remplace les règles géométriques)
+
+Un seul réseau décide toute la forme de la main. Sans lui, l'application retombe sur les règles de `src/core/rules.js`.
+
+| | |
+|---|---|
+| Entrée | 42 valeurs : `handFeatures2d` = 21 points image (x, y), poignet à l'origine, divisés par la taille de la main, miroir pour la main gauche |
+| Tronc | Dense 128 ReLU → Dropout 0,3 → Dense 64 ReLU → Dropout 0,2 |
+| Sortie `pose` | softmax : poing, 1–4 doigts, V, main ouverte, pouce levé/baissé, cornes, appel, pistolet, OK, autre |
+| Sortie `fingers` | 5 sigmoïdes : chaque doigt levé ? (le comptage = leur somme) |
+| Sortie `palm` | sigmoïde : paume vers la caméra ? (apprise sur vos enregistrements) |
+| Sortie `down` | sigmoïde : doigts vers le bas ? |
+| Taille | ≈ 15 000 paramètres, < 100 Ko |
+| Fichiers | `public/models/hand/` (chargé tout seul par l'application) |
+
+### Données : HaGRIDv2, sans télécharger d'images
+Les annotations de [HaGRIDv2](https://github.com/hukenovs/hagrid) contiennent déjà les 21 points MediaPipe de chaque main
+(≈ 1 million de mains, séparées en train / val / test **par personne**). Une archive de 700 Mo, publique :
+
+```bash
+cd training
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt   # ou python3.12 -m venv
+curl -LO https://rndml-team-cv.obs.ru-moscow-1.hc.sbercloud.ru/datasets/hagrid_v2/annotations_with_landmarks/annotations.zip
+unzip annotations.zip -d data/hagrid_v2
+.venv/bin/python extract_hagrid_v2.py --annotations data/hagrid_v2/annotations --out data/hagrid_v2.npz   # ≈ 1 min
+.venv/bin/python train_hand.py --npz data/hagrid_v2.npz                                                     # ≈ 5–10 min sur CPU
+```
+
+Correspondance des classes (`common.HAGRID_V2_MAP`) **vérifiée sur les données** : pour chaque classe on a mesuré
+quels doigts sont levés. Par exemple `stop` a le pouce replié (01111) : ce sont nos « 4 doigts », pas la main ouverte ;
+`three2` et `three_gun` sont pouce + index + majeur. Les classes `*_inverted` donnent la cible « doigts vers le bas ».
+`middle_finger`, `grip`, `point`, `no_gesture`… servent d'exemples « autre » (aucun accord).
+
+Une étiquette inconnue (paume/dos dans HaGRID, doigts d'une pose « autre ») a un **poids nul** : cette sortie
+n'apprend simplement pas sur cet exemple. `labels.json` liste les sorties réellement apprises (`trained_heads`) ;
+l'application garde la mesure géométrique pour les autres.
+
+### Affinage sur vos mains
+- **Dans la page** (bouton *apprendre mes gestes*) : on choisit paume/dos et doigts en haut/en bas, on montre chaque
+  geste 3 s, puis TensorFlow.js affine le réseau HaGRID (tronc gelé, puis tout le réseau avec un petit pas).
+  Une pose absente de HaGRID (cornes + pouce) ajoute une sortie sans effacer les autres. Sauvegardé dans le navigateur.
+- **En Python** : bouton *exporter* → `mes_gestes.json`, puis `train_hand.py --npz data/hagrid_v2.npz --finetune-json mes_gestes.json`.
+
+### Résultats
+`train_hand.py` affiche le rapport par classe, la matrice de confusion, la précision par doigt, le comptage exact
+et la précision « doigts vers le bas », sur la validation **et** sur le test HaGRID (personnes jamais vues).
+Tout est enregistré dans `public/models/hand/metrics.json`.
+
+## Anciens modèles (optionnels)
 
 | Modèle | Entrée | Architecture | Taille | Sortie |
 |---|---|---|---|---|
-| **A — poses statiques** | 63 valeurs (`normalizePose`) | MLP 63 → 128 → 64 → N | ≈ 17 k paramètres | `public/models/pose/` |
+| **A — poses statiques** (remplacé par HandNet) | 63 valeurs (`normalizePose`) | MLP 63 → 128 → 64 → N | ≈ 17 k paramètres | `public/models/pose/` |
 | **B — gestes dynamiques** | 24 images × 67 valeurs (`sequenceFeatures`) | 1D-CNN (ou GRU) | ≈ 45 k paramètres | `public/models/dynamic/` |
 
-Les deux modèles sont **optionnels**. Sans eux, l'application utilise les règles géométriques
-(`src/core/rules.js`) et les détecteurs de mouvement (`src/core/motion.js`). Quand un modèle est présent,
-il remplace les règles dès que sa confiance dépasse 80 %.
+Sans le modèle B, l'application utilise les détecteurs de mouvement (`src/core/motion.js`).
 
 ## Où entraîner ?
 

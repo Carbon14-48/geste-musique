@@ -11,7 +11,8 @@ import { MidiOut } from './audio/midi.js';
 import { Looper } from './audio/looper.js';
 import { MidiCapture } from './audio/midiCapture.js';
 import { KnnClassifier } from './ml/knn.js';
-import { PoseModel, DynamicModel } from './ml/models.js';
+import { DynamicModel } from './ml/models.js';
+import { HandModel } from './ml/handModel.js';
 import { DatasetRecorder } from './ml/dataset.js';
 import { MODES, findMode } from './modes/index.js';
 import { GlobalGestures, GLOBAL_HELP } from './modes/global.js';
@@ -398,12 +399,16 @@ class App {
       video.srcObject = stream;
       await video.play();
       $('stage').style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+      if (video.videoWidth) this.tracker.aspect = video.videoHeight / video.videoWidth;
       const info = await this.detector.init({ numHands: 2 });
 
       const status = [`Détecteur : MediaPipe Hand Landmarker (${info.delegate})`, `Modèle : ${info.model}`];
       try {
-        this.tracker.poseModel = await PoseModel.load();
-        status.push(this.tracker.poseModel ? `Poses (TF.js) : ${this.tracker.poseModel.labels.join(', ')}` : 'Poses : règles géométriques (pas de models/pose/)');
+        // Même réseau que Geste Live : affiné sur tes mains s'il existe, sinon celui appris sur HaGRID.
+        this.tracker.poseModel = (await HandModel.loadSaved()) ?? (await HandModel.loadBase());
+        status.push(this.tracker.poseModel
+          ? `Mains (TF.js HandNet, ${this.tracker.poseModel.meta.source}) : ${this.tracker.poseModel.labels.join(', ')}`
+          : 'Mains : règles géométriques (pas de models/hand/)');
       } catch (err) {
         status.push(`Poses : erreur de chargement (${err.message})`);
       }

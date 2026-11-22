@@ -17,6 +17,7 @@ import { Tutorial } from './tutorial.js';
 import { InstrumentSwitch } from './instrumentSwitch.js';
 import { MuteDetector } from './mute.js';
 import { TRAINABLE_POSES, hasSavedModel, hasPythonModel } from '../ml/poses.js';
+import { DatasetRecorder } from '../ml/dataset.js';
 
 const $ = (id) => document.getElementById(id);
 const STORE = 'geste-live.settings.v2'; // v2 : rôles des mains corrigés, nouveaux réglages d'image
@@ -67,9 +68,9 @@ class GesteLive {
     this.mutedSince = 0;
     this.panicked = false;
     this.instrumentSwitch = new InstrumentSwitch();
-    this.learnSamples = []; // {label, x} enregistrés pour l'entraînement TensorFlow
+    this.learnSamples = []; // {label, x, palm, down} enregistrés pour affiner le réseau TensorFlow
     this.learning = null; // {label, until}
-    this.modelSource = 'standard';
+    this.modelSource = 'simple';
     this.loadingInstrument = null;
     // Compteurs utilisés par le tutoriel pour savoir si un geste a été réussi.
     this.stats = {
@@ -258,6 +259,7 @@ class GesteLive {
       this.applySettings();
       this.video.srcObject = await this.openCamera();
       await this.video.play();
+      if (this.video.videoWidth) this.tracker.aspect = this.video.videoHeight / this.video.videoWidth;
       await this.detector.init({ numHands: 2 });
       await this.loadPoseModel();
       this.started = true;
@@ -308,24 +310,27 @@ class GesteLive {
 
   // --- TensorFlow ------------------------------------------------------------------------------
 
-  /** Modèle personnel (entraîné dans la page) en priorité, sinon le modèle Python, sinon les règles. */
+  /**
+   * Réseau HandNet : affiné sur tes mains (IndexedDB) en priorité, sinon le modèle pré-entraîné
+   * sur HaGRID (public/models/hand/). Les règles géométriques ne servent que s'il n'y a aucun modèle.
+   */
   async loadPoseModel() {
     // TensorFlow.js (1,3 Mo) n'est chargé que s'il y a un modèle à utiliser.
-    if (hasSavedModel()) {
-      const { BrowserPoseModel } = await import('../ml/trainer.js');
-      const own = await BrowserPoseModel.load();
-      if (own) return this.useModel(own, 'gestes personnalisés');
-    }
     try {
-      if (!(await hasPythonModel())) return this.useModel(null, 'standard');
-      const [{ PoseModel }, { useCpu }] = await Promise.all([import('../ml/models.js'), import('../ml/trainer.js')]);
-      await useCpu();
-      const python = await PoseModel.load();
-      if (python) return this.useModel(python, 'avancée');
+      if (hasSavedModel()) {
+        const { HandModel } = await import('../ml/handModel.js');
+        const own = await HandModel.loadSaved();
+        if (own) return this.useModel(own, 'IA · adaptée à tes mains');
+      }
+      if (await hasPythonModel()) {
+        const { HandModel } = await import('../ml/handModel.js');
+        const base = await HandModel.loadBase();
+        if (base) return this.useModel(base, 'IA · apprise sur 1 million de mains');
+      }
     } catch (err) {
-      console.warn('modèle de poses illisible', err);
+      console.warn('modèle de mains illisible', err);
     }
-    this.useModel(null, 'standard');
+    this.useModel(null, 'simple');
   }
 
   useModel(model, source) {
@@ -339,6 +344,8 @@ class GesteLive {
   initLearn() {
     const box = $('learn-poses');
     this.learnButtons = {};
+    this.learnVariant = { palm: true, down: false };
+    this.dataset = new DatasetRecorder(); // mêmes exemples, points bruts, pour training/train_hand.py
     for (const { label, name } of TRAINABLE_POSES) {
       const b = document.createElement('button');
       b.innerHTML = `${name} <span class="n">0</span>`;
@@ -346,20 +353,34 @@ class GesteLive {
       box.append(b);
       this.learnButtons[label] = b;
     }
+    for (const b of document.querySelectorAll('#panel-learn .learn-variant button')) {
+      b.addEventListener('click', () => {
+        const key = 'palm' in b.dataset ? 'palm' : 'down';
+        this.learnVariant[key] = b.dataset[key] === '1';
+        for (const other of b.parentElement.children) other.classList.toggle('on', other === b);
+        this.updateLearnCounts();
+      });
+    }
     $('learn-train').addEventListener('click', () => this.trainModel());
+    $('learn-export').addEventListener('click', () => this.exportLearnData());
     $('learn-reset').addEventListener('click', async () => {
       this.learnSamples = [];
+      this.dataset.clear();
       this.updateLearnCounts();
-      const { BrowserPoseModel } = await import('../ml/trainer.js');
-      await BrowserPoseModel.remove();
+      const { HandModel } = await import('../ml/handModel.js');
+      await HandModel.removeSaved();
       await this.loadPoseModel();
       $('learn-status').textContent = 'gestes personnalisés effacés';
     });
   }
 
+  /** Compteurs par geste, pour la variante choisie (paume/dos, haut/bas). */
   updateLearnCounts() {
+    const { palm, down } = this.learnVariant;
     for (const [label, b] of Object.entries(this.learnButtons)) {
-      b.querySelector('.n').textContent = this.learnSamples.filter((s) => s.label === label).length;
+      b.querySelector('.n').textContent = this.learnSamples.filter(
+        (s) => s.label === label && s.palm === palm && s.down === down,
+      ).length;
       b.classList.toggle('recording', this.learning?.label === label);
     }
   }
@@ -370,7 +391,7 @@ class GesteLive {
       return;
     }
     // Une seconde pour se mettre en place, puis 3 secondes d'enregistrement.
-    this.learning = { label, from: performance.now() + 1000, until: performance.now() + 4000 };
+    this.learning = { label, ...this.learnVariant, from: performance.now() + 1000, until: performance.now() + 4000 };
     $('learn-status').textContent = 'prépare le geste…';
     this.updateLearnCounts();
   }
@@ -386,7 +407,9 @@ class GesteLive {
       return;
     }
     for (const hand of [frame.hands.left, frame.hands.right]) {
-      if (hand) this.learnSamples.push({ label: L.label, x: Array.from(hand.features) });
+      if (!hand) continue;
+      this.learnSamples.push({ label: L.label, x: Array.from(hand.features2d), palm: L.palm, down: L.down });
+      this.dataset.addPose(L.label, hand, { palm: L.palm, down: L.down, aspect: this.tracker.aspect });
     }
     $('learn-status').textContent = `enregistrement… ${((L.until - t) / 1000).toFixed(1)} s`;
     if (Math.round(t / 100) % 3 === 0) this.updateLearnCounts();
@@ -395,30 +418,46 @@ class GesteLive {
   async trainModel() {
     const status = $('learn-status');
     const bar = $('learn-progress');
-    const n = new Set(this.learnSamples.map((s) => s.label)).size;
-    if (n < 2) {
-      status.textContent = 'montre au moins deux gestes différents (idéalement tous)';
+    if (this.learnSamples.length < 20) {
+      status.textContent = 'enregistre d\'abord quelques gestes (idéalement tous)';
       return;
     }
     bar.hidden = false;
     status.textContent = 'je m\'adapte à tes gestes…';
     try {
-      const { BrowserPoseModel } = await import('../ml/trainer.js');
-      const model = await BrowserPoseModel.train(this.learnSamples, {
+      const { HandModel } = await import('../ml/handModel.js');
+      // On repart toujours du modèle HaGRID (frais) : il a vu des milliers de mains.
+      const base = await HandModel.loadBase();
+      const model = await HandModel.fineTune(this.learnSamples, base, {
         onProgress: (epoch, epochs) => {
           bar.value = epoch / epochs;
           status.textContent = `je m'adapte à tes gestes… ${Math.round((epoch / epochs) * 100)} %`;
         },
       });
       await model.save().catch(() => {}); // sans IndexedDB : modèle gardé pour cette session
-      this.useModel(model, 'gestes personnalisés');
-      status.textContent = 'c\'est prêt ! tes gestes sont maintenant reconnus.';
-      this.plate.say('mes gestes activés');
-    } catch {
+      this.useModel(model, 'IA · adaptée à tes mains');
+      status.textContent = `c'est prêt ! je reconnais ${Math.round(model.meta.accuracy * 100)} % de tes exemples.`;
+      this.plate.say('gestes adaptés à tes mains');
+    } catch (err) {
+      console.warn(err);
       status.textContent = 'ça n\'a pas marché, réessaie.';
     } finally {
       bar.hidden = true;
     }
+  }
+
+  /** Télécharge les exemples (points bruts) pour training/train_hand.py --finetune-json. */
+  exportLearnData() {
+    if (!this.dataset.poses.length) {
+      $('learn-status').textContent = 'rien à exporter : enregistre d\'abord des gestes';
+      return;
+    }
+    const blob = new Blob([JSON.stringify(this.dataset.toJSON())], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mes_gestes.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   loopDetect() {
